@@ -47,11 +47,11 @@ contract IICO {
     uint public endTime;                        // When the sale ends.
     ERC20 public token;                         // The token which is sold.
     uint public tokensForSale;                  // The amount of tokens which will be sold.
-    uint public maxBonusPermil;                // The maximum bonus in ‰.
-    uint constant PER_MIL_DIVISOR=uint(1000); // The quantity we need to divide by to normalize ‰.
+    uint public maxBonusPermil;                 // The maximum bonus in ‰.
+    uint constant PER_MIL_DIVISOR=uint(1000);   // The quantity we need to divide by to normalize ‰.
     
     /* *** Finalization variables *** */
-    bool public finalized;              // True when the cutting bid has been found.
+    bool public finalized;                 // True when the cutting bid has been found.
     uint public cutOffBidID=TAIL;          // The last accepted bid. All bids next it are accepted. Final only if finalized==true.
     uint public sumAcceptedContrib;        // The sum of accepted contributions. Final only if finalized==true. 
     uint public sumAcceptedVirtualContrib; // The sum of virtual (taking into account bonuses) contributions. Final only if finalized==true.
