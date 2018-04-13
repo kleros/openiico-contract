@@ -58,6 +58,8 @@ contract IICO {
     
     modifier onlyOwner{ require(owner==msg.sender); _; }
     
+    /* *** Functions Modifying the state *** */
+    
     /** @dev Constructor. First contract set up (tokens will also need to be transfered to the contract and then setToken to be called to finish the setup).
      *  @param _startTime Time the sale will start in Unix Timestamp.
      *  @param _fullBonusLength Amount of seconds the sale lasts in the full bonus period.
@@ -140,32 +142,6 @@ contract IICO {
         contributorBidIDs[msg.sender].push(lastBidID);
     }
     
-    /** @dev Search for the correct insertion spot for a bid.
-     *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
-     *  @param _maxVal The maximum valuation given by the contributor.
-     *  @param _nextStart The bidID of next bid in the initial position to start the search.
-     *  @return nextInsert The bidID of next bid to the bid which will inserted.
-     */
-    function search(uint _maxVal, uint _nextStart) constant public returns(uint nextInsert) {
-        uint next=_nextStart;
-        bool found;
-
-
-        while(!found) { // While we aren't at the insertion point.
-            Bid storage nextBid = bids[next];
-            uint prev   = nextBid.prev;
-            Bid storage prevBid = bids[prev];
-            
-            if (_maxVal<prevBid.maxVal)       // It should be inserted before.
-                next=prev;
-            else if (_maxVal>=nextBid.maxVal) // It should be inserted after. The second value we sort by are bidID. Those are increasing, thus if the next bid is of same maxVal, we should insert after.
-                next=nextBid.next;
-            else                              // We found out the insertion point.
-                found = true;
-        }
-        
-        return next;
-    }
     
     /** @dev Search the correct insertion spot and submit a bid.
      *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
@@ -274,6 +250,32 @@ contract IICO {
     
     /* *** Constant and View *** */
     
+    /** @dev Search for the correct insertion spot for a bid.
+     *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
+     *  @param _maxVal The maximum valuation given by the contributor.
+     *  @param _nextStart The bidID of next bid in the initial position to start the search.
+     *  @return nextInsert The bidID of next bid to the bid which will inserted.
+     */
+    function search(uint _maxVal, uint _nextStart) constant public returns(uint nextInsert) {
+        uint next=_nextStart;
+        bool found;
+
+
+        while(!found) { // While we aren't at the insertion point.
+            Bid storage nextBid = bids[next];
+            uint prev   = nextBid.prev;
+            Bid storage prevBid = bids[prev];
+            
+            if (_maxVal<prevBid.maxVal)       // It should be inserted before.
+                next=prev;
+            else if (_maxVal>=nextBid.maxVal) // It should be inserted after. The second value we sort by are bidID. Those are increasing, thus if the next bid is of same maxVal, we should insert after.
+                next=nextBid.next;
+            else                              // We found out the insertion point.
+                found = true;
+        }
+        
+        return next;
+    }    
     /** @dev Return the current bonus. The bonus only change in 1‰ increments.
      *  @return b The bonus in ‰.
      */
