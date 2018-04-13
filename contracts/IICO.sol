@@ -9,6 +9,13 @@ import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 /** @title Interactive Coin Offering
  *  This contract implements the Interactive Coin Offering token sale as described in this paper:
  *  https://people.cs.uchicago.edu/~teutsch/papers/ico.pdf
+ *  Modifications compared to the paper:
+ *  -A fix amount of tokens is sold. This allows more flexibility for the distribution of the remaining tokens (round, team tokens which can be preallocated, non-initial sell of some cryptographic assets).
+ *  -The pointer is only moved when the sale is over. This greatly reduces the amount of write operations and code complexity. However at least one party must make one or multiple calls to finalized
+ *  -Buckets are not used as they are not required and increases code complexity.
+ *  -The bid submitter must provide the insertion spot. A search of the insertion spot is still done in the contract, but giving the search starting point greatly lower gas. The search is required as the correct insertion spot can change before a TX is signed and its execution.
+ *  -Automatic withdrawals are only possible at the end of the sale. This decreases code complexity and interactions.
+ *  -We put a full bonus, free withdrawal period at the beginning. This allows everyone to have a chance to place bids with full bonus and avoid clogging the network just after the sale starts. Note that at this moment, no information can be taken from granted as parties can withdraw freely.
  */
 contract IICO {
     
@@ -275,7 +282,8 @@ contract IICO {
         }
         
         return next;
-    }    
+    }
+    
     /** @dev Return the current bonus. The bonus only change in 1‰ increments.
      *  @return b The bonus in ‰.
      */
