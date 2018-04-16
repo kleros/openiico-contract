@@ -30,7 +30,7 @@ contract IICO {
     uint constant INFINITY = uint(-2); // A value so high that a bid using it is guaranteed to succeed. Still lower than TAIL to be placed before TAIL.
     // A bid to buy tokens as long as the personal maximum valuation is not exceeded.
     // Bids are in a sorted doubly linked list.
-    // They are sorted in ascending order by (maxVal,bidID) where bidID is the ID and index of the bid in the mapping.
+    // They are sorted in ascending order by (maxVal,bidID) where bidID is the ID and key of the bid in the mapping.
     // The list contains two artificial bids HEAD and TAIL having respectively the minimum and maximum bidID and maxVal.
     struct Bid {
         /* *** Linked List Members *** */
@@ -60,7 +60,7 @@ contract IICO {
 
     /* *** Finalization variables *** */
     bool public finalized;                 // True when the cutting bid has been found. The following variables are final only after finalized==true.
-    uint public cutOffBidID = TAIL;        // The last accepted bid. All bids after it are accepted.
+    uint public cutOffBidID = TAIL;        // The first accepted bid. All bids after it are accepted.
     uint public sumAcceptedContrib;        // The sum of accepted contributions.
     uint public sumAcceptedVirtualContrib; // The sum of virtual (taking into account bonuses) contributions.
 
