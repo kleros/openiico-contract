@@ -27,7 +27,7 @@ contract IICO {
     /* *** Bid *** */
     uint constant HEAD = 0;            // Minimum value used for both the maxVal and bidID of the head of the linked list.
     uint constant TAIL = uint(-1);     // Maximum value used for both the maxVal and bidID of the tail of the linked list.
-    uint constant INFINITY = uint(-2); // A value so high that a bid using it is guaranteed to suceed. Still lower than TAIL to be placed before TAIL.
+    uint constant INFINITY = uint(-2); // A value so high that a bid using it is guaranteed to succeed. Still lower than TAIL to be placed before TAIL.
     // A bid to buy tokens as long as the personal maximum valuation is not exceeded.
     // Bids are in a sorted doubly linked list.
     // They are sorted in ascending order by (maxVal,bidID) where bidID is the ID and index of the bid in the mapping.
@@ -39,7 +39,7 @@ contract IICO {
         /* ***     Bid Members     *** */
         uint maxVal;          // Maximum valuation in wei beyond which the contributor prefers refund.
         uint contrib;         // Contribution in wei.
-        uint bonus;           // The bonus in ‰.
+        uint bonus;           // The bonus expressed in 1/BONUS_DIVISOR.
         address contributor;  // The contributor which placed the bid.
         bool withdrawn;       // True if the bid has been withdrawn.
         bool redeemed;        // True if the ETH or tokens has been redeemed.
@@ -55,8 +55,8 @@ contract IICO {
     uint public endTime;                        // When the sale ends.
     ERC20 public token;                         // The token which is sold.
     uint public tokensForSale;                  // The amount of tokens which will be sold.
-    uint public maxBonusPermil;                 // The maximum bonus in ‰.
-    uint constant PERMIL_DIVISOR=uint(1000);   // The quantity we need to divide by to normalize ‰.
+    uint public maxBonus;                       // The maximum bonus expressed in 1/BONUS_DIVISOR. 
+    uint constant BONUS_DIVISOR = 1E9;          // The quantity we need to divide by to normalize the bonus.
     
     /* *** Finalization variables *** */
     bool public finalized;                 // True when the cutting bid has been found. The following variables are final only after finalized==true.
@@ -73,15 +73,15 @@ contract IICO {
      *  @param _fullBonusLength Amount of seconds the sale lasts in the full bonus period.
      *  @param _partialWithdrawalLength Amount of seconds the sale lasts in the partial withdrawal period.
      *  @param _withdrawalLockUpLength Amount of seconds the sale lasts in the withdrawal lockup period.
-     *  @param _maxBonusPermil The maximum bonus in ‰.
+     *  @param _maxBonus The maximum bonus. Will be normalized by BONUS_DIVISOR. For example for a 20% bonus, _maxBonus must be 0.2 * BONUS_DIVISOR.
      */
-    function IICO(uint _startTime, uint _fullBonusLength, uint _partialWithdrawalLength, uint _withdrawalLockUpLength, uint _maxBonusPermil) public {
+    function IICO(uint _startTime, uint _fullBonusLength, uint _partialWithdrawalLength, uint _withdrawalLockUpLength, uint _maxBonus) public {
         owner=msg.sender;
         startTime=_startTime;
         endFullBonusTime=startTime+_fullBonusLength;
         withdrawalLockTime=endFullBonusTime+_partialWithdrawalLength;
         endTime=withdrawalLockTime+_withdrawalLockUpLength;
-        maxBonusPermil=_maxBonusPermil;
+        maxBonus=_maxBonus;
         
         // Add the virtual bids. This simplifies other functions.
         bids[HEAD]=Bid({
@@ -174,19 +174,18 @@ contract IICO {
         
         bid.withdrawn=true;
         
-        // Compute which ‰ will be refunded. All of it if before endFullBonusTime. Otherwise an amount decreasing linearly from endFullBonusTime to withdrawalLockTime.
-        uint refundPerMil = (now<endFullBonusTime) ? PERMIL_DIVISOR : (PERMIL_DIVISOR*(withdrawalLockTime-now))/(withdrawalLockTime-endFullBonusTime);
-        uint refund = (bid.contrib*refundPerMil)/PERMIL_DIVISOR;
+        // Before endFullBonusTime, everything is refunded. Otherwise an amount decreasing linearly from endFullBonusTime to withdrawalLockTime.
+        uint refund = (now<endFullBonusTime) ? bid.contrib : (bid.contrib*(withdrawalLockTime-now))/(withdrawalLockTime-endFullBonusTime);
         assert(refund<=bid.contrib); // Make sure that we don't refund more than the contribution. Would a bug arise, we prefer blocking withdrawal than letting someone steal money.
         bid.contrib -= refund;
-        bid.bonus /= 3; // Remove one third of the bonus.
+        bid.bonus /= 3; // Divide the bonus by 3. 
         
         msg.sender.transfer(refund);
     }
     
     /** @dev Finalize by finding the cut-off bid.
      *  Since the amount of bids is not bounded, this function may have to be called multiple times.
-     *  The function is in O(min(n,maxIt)) where n is the amount of bids. In total it will perform O(n) computations, possibly in multiple calls.
+     *  The function is in O(min(n,_maxIt)) where n is the amount of bids. In total it will perform O(n) computations, possibly in multiple calls.
      *  Each call only has a O(1) storage write operations.
      *  @param _maxIt The maximum amount of bids to go through. This value must be set in order to not exceed the gas limit.
      */
@@ -200,20 +199,20 @@ contract IICO {
         uint localSumAcceptedVirtualContrib=sumAcceptedVirtualContrib;
         
         // Search for the cut-off while counting the contributions.
-        for (uint it;it<_maxIt&&!finalized;++it) {
+        for (uint it=0;it<_maxIt&&!finalized;++it) {
             Bid storage bid = bids[localCutOffBidID];
             if (bid.contrib+localSumAcceptedContrib<bid.maxVal) { // We haven't found the cut-off yet.
                 localSumAcceptedContrib        += bid.contrib;
-                localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib*bid.bonus)/PERMIL_DIVISOR;
+                localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib*bid.bonus)/BONUS_DIVISOR;
                 localCutOffBidID = bid.prev; // Go to previous bid.
             }else { // We found the cut-off. This bid will be taken partially.
                 finalized=true;
-                uint contribCutOff = bid.maxVal >= localSumAcceptedContrib ? bid.maxVal - localSumAcceptedContrib : 0; // The contribution of the cut-off bid. At max the amount which remains to go to the maximum valuation of the cut-off bid.
+                uint contribCutOff = bid.maxVal >= localSumAcceptedContrib ? bid.maxVal - localSumAcceptedContrib : 0; // The contribution of the cut-off bid. The amount which remains to go to the maximum valuation of the cut-off bid if any.
                 contribCutOff = contribCutOff < bid.contrib ? contribCutOff : bid.contrib; // The contribution can be at max the one given by the contributor. This line should not be required but is added as an extra security measure.
                 bid.contributor.send(bid.contrib-contribCutOff); // Send the non-accepted part. Use of send in order not to block in case the contributor fallback would revert.
                 bid.contrib = contribCutOff; // Update the contribution value.
                 localSumAcceptedContrib += bid.contrib;
-                localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib*bid.bonus)/PERMIL_DIVISOR;
+                localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib*bid.bonus)/BONUS_DIVISOR;
                 beneficiary.send(localSumAcceptedContrib); // Use of send in order not to allow the beneficiary to block the finalization.
             }
         }
@@ -236,7 +235,7 @@ contract IICO {
         
         bid.redeemed=true;
         if (bid.maxVal>cutOffBid.maxVal || (bid.maxVal==cutOffBid.maxVal && _bidID>=cutOffBidID)) // Give tokens if the bid is accepted.
-            token.transfer(bid.contributor,(tokensForSale*(bid.contrib + (bid.contrib*bid.bonus)/PERMIL_DIVISOR))/sumAcceptedVirtualContrib);
+            token.transfer(bid.contributor,(tokensForSale*(bid.contrib + (bid.contrib*bid.bonus)/BONUS_DIVISOR))/sumAcceptedVirtualContrib);
         else                                                                                      // Reimburse otherwise.
             bid.contributor.transfer(bid.contrib);
     }
@@ -259,7 +258,7 @@ contract IICO {
     
     /** @dev Search for the correct insertion spot of a bid.
      *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
-     *  @param _maxVal The maximum valuation given by the contributor.
+     *  @param _maxVal The maximum valuation given by the contributor. Or INFINITY if no maximum valuation is given.
      *  @param _nextStart The bidID of next bid in the initial position to start the search.
      *  @return nextInsert The bidID of next bid the bid must be inserted.
      */
@@ -284,26 +283,30 @@ contract IICO {
         return next;
     }
     
-    /** @dev Return the current bonus. The bonus only changes in 1‰ increments.
-     *  @return b The bonus in ‰.
+    /** @dev Return the current bonus. The bonus only changes in 1/BONUS_DIVISOR increments.
+     *  @return b The bonus expressed in 1/BONUS_DIVISOR.
      */
     function bonus() public constant returns(uint b) {
         if (now<endFullBonusTime)  // Full bonus.
-            return maxBonusPermil;
+            return maxBonus;
         else if (now>endTime)      // Assume no bonus after end.
             return 0;
         else                       // Compute the bonus decreasing linearly from endFullBonusTime to endTime.
-            return (maxBonusPermil*(endTime-now))/(endTime-endFullBonusTime);
+            return (maxBonus*(endTime-now))/(endTime-endFullBonusTime);
     }
     
     /** @dev Get the total contribution of an address.
      *  It can be used for KYC threshold.
      *  The function is O(n) where n is the amount of bids by a the contributor.
      *  This means the contributor can make totalContrib(contributor) reverts due to out of gas on purpose.
+     *  @param _contributor The contributor the contribution will be returned.
+     *  @return contribution The total contribution of the contributor.
      */
     function totalContrib(address _contributor) public constant returns (uint contribution) {
         for (uint i=0;i<contributorBidIDs[_contributor].length;++i)
             contribution+=bids[contributorBidIDs[_contributor][i]].contrib;
     }
 }
+
+
 
