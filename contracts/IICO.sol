@@ -204,7 +204,7 @@ contract IICO {
             if (bid.contrib+localSumAcceptedContrib < bid.maxVal) { // We haven't found the cut-off yet.
                 localSumAcceptedContrib        += bid.contrib;
                 localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
-                localCutOffBidID = bid.prev; // Go to previous bid.
+                localCutOffBidID = bid.prev; // Go to the previous bid.
             } else { // We found the cut-off. This bid will be taken partially.
                 finalized = true;
                 uint contribCutOff = bid.maxVal >= localSumAcceptedContrib ? bid.maxVal - localSumAcceptedContrib : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
@@ -304,5 +304,32 @@ contract IICO {
     function totalContrib(address _contributor) public constant returns (uint contribution) {
         for (uint i = 0; i < contributorBidIDs[_contributor].length; ++i)
             contribution += bids[contributorBidIDs[_contributor][i]].contrib;
+    }
+
+    /* *** Interface Views *** */
+
+    /**
+     * @dev Get the current valuations, with bonus not taken into account and taken into account.
+     * @return The current valuations, with bonus not taken into account and taken into account.
+     */
+    function valuation() public view returns (uint localSumAcceptedContrib, uint localSumAcceptedVirtualContrib) {
+        uint localCutOffBidID = cutOffBidID;
+        localSumAcceptedContrib = 0;
+        localSumAcceptedVirtualContrib = 0;
+
+        // Search for the cut-off bid while adding the contributions.
+        while (true) {
+            Bid storage bid = bids[localCutOffBidID];
+            if (bid.contrib + localSumAcceptedContrib < bid.maxVal) { // We haven't found the cut-off yet.
+                localSumAcceptedContrib        += bid.contrib;
+                localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
+                localCutOffBidID = bid.prev; // Go to the previous bid.
+            } else { // We found the cut-off bid. This bid will be taken partially.
+                uint contribCutOff = bid.maxVal >= localSumAcceptedContrib ? bid.maxVal - localSumAcceptedContrib : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
+                localSumAcceptedContrib += contribCutOff;
+                localSumAcceptedVirtualContrib += contribCutOff + (contribCutOff * bid.bonus) / BONUS_DIVISOR;
+                break;
+            }
+        }
     }
 }
