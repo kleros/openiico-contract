@@ -314,8 +314,6 @@ contract IICO {
      */
     function valuation() public view returns (uint localSumAcceptedContrib, uint localSumAcceptedVirtualContrib) {
         uint localCutOffBidID = cutOffBidID;
-        localSumAcceptedContrib = 0;
-        localSumAcceptedVirtualContrib = 0;
 
         // Search for the cut-off bid while adding the contributions.
         while (true) {
