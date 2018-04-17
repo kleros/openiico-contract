@@ -9,14 +9,14 @@ import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 /** @title Interactive Coin Offering
  *  This contract implements the Interactive Coin Offering token sale as described in this paper:
  *  https://people.cs.uchicago.edu/~teutsch/papers/ico.pdf
- *  Modifications compared to the paper:
- *  -A fix amount of tokens is sold. This allows more flexibility for the distribution of the remaining tokens (rounds, team tokens which can be preallocated, non-initial sell of some cryptographic assets).
- *  -The pointer is only moved when the sale is over. This greatly reduces the amount of write operations and code complexity. However, at least one party must make one or multiple calls to finalize the sale.
+ *  Implementation details and modifications compared to the paper:
+ *  -A fixed amount of tokens is sold. This allows more flexibility for the distribution of the remaining tokens (rounds, team tokens which can be preallocated, non-initial sell of some cryptographic assets).
+ *  -The valuation pointer is only moved when the sale is over. This greatly reduces the amount of write operations and code complexity. However, at least one party must make one or multiple calls to finalize the sale.
  *  -Buckets are not used as they are not required and increase code complexity.
- *  -The bid submitter must provide the insertion spot. A search of the insertion spot is still done in the contract, but giving the search starting point greatly lowers gas consumption. The search is still required as the correct insertion spot can change before a TX is signed and its execution.
+ *  -The bid submitter must provide the insertion spot. A search of the insertion spot is still done in the contract just in case the one provided was wrong or other bids were added between when the TX got signed and executed, but giving the search starting point greatly lowers gas consumption.
  *  -Automatic withdrawals are only possible at the end of the sale. This decreases code complexity and possible interactions between different parts of the code.
- *  -We put a full bonus, free withdrawal period at the beginning. This allows everyone to have a chance to place bids with full bonus and avoid clogging the network just after the sale starts. Note that at this moment, no information can be taken from granted as parties can withdraw freely.
- *  -Calling the fallback function while sending ETH place a bid with an infinite maximum valuation. This allows buyers who want to buy no matter the price not to need to use a specific interface and just send ETH. Without ETH, a call to the fallback function redeems the bids of the caller.
+ *  -We put a full bonus, free withdrawal period at the beginning. This allows everyone to have a chance to place bids with full bonus and avoids clogging the network just after the sale starts. Note that at this moment, no information can be taken for granted as parties can withdraw freely.
+ *  -Calling the fallback function while sending ETH places a bid with an infinite maximum valuation. This allows buyers who want to buy no matter the price not need to use a specific interface and just send ETH. Without ETH, a call to the fallback function redeems the bids of the caller.
  */
 contract IICO {
 
@@ -39,10 +39,10 @@ contract IICO {
         /* ***     Bid Members     *** */
         uint maxVal;          // Maximum valuation in wei beyond which the contributor prefers refund.
         uint contrib;         // Contribution in wei.
-        uint bonus;           // The bonus expressed in 1/BONUS_DIVISOR.
-        address contributor;  // The contributor which placed the bid.
+        uint bonus;           // The numerator of the bonus that will be divided by BONUS_DIVISOR.
+        address contributor;  // The contributor who placed the bid.
         bool withdrawn;       // True if the bid has been withdrawn.
-        bool redeemed;        // True if the ETH or tokens has been redeemed.
+        bool redeemed;        // True if the ETH or tokens have been redeemed.
     }
     mapping (uint => Bid) public bids; // Map bidID to bid.
     mapping (address => uint[]) public contributorBidIDs; // Map contributor to a list of its bid ID.
@@ -50,12 +50,12 @@ contract IICO {
 
     /* *** Sale parameters *** */
     uint public startTime;                      // When the sale starts.
-    uint public endFullBonusTime;               // When the full bonus ends.
-    uint public withdrawalLockTime;             // When the contributors can't withdraw their bids anymore.
+    uint public endFullBonusTime;               // When the full bonus period ends.
+    uint public withdrawalLockTime;             // When the contributors can't withdraw their bids manually anymore.
     uint public endTime;                        // When the sale ends.
     ERC20 public token;                         // The token which is sold.
     uint public tokensForSale;                  // The amount of tokens which will be sold.
-    uint public maxBonus;                       // The maximum bonus expressed in 1/BONUS_DIVISOR.
+    uint public maxBonus;                       // The maximum bonus. Will be normalized by BONUS_DIVISOR. For example for a 20% bonus, _maxBonus must be 0.2 * BONUS_DIVISOR.
     uint constant BONUS_DIVISOR = 1E9;          // The quantity we need to divide by to normalize the bonus.
 
     /* *** Finalization variables *** */
@@ -68,8 +68,8 @@ contract IICO {
 
     /* *** Functions Modifying the state *** */
 
-    /** @dev Constructor. First contract set up (tokens will also need to be transfered to the contract and then setToken to be called to finish the setup).
-     *  @param _startTime Time the sale will start in Unix Timestamp.
+    /** @dev Constructor. First contract set up (tokens will also need to be transferred to the contract and then setToken needs to be called to finish the setup).
+     *  @param _startTime Time the sale will start in seconds since the Unix Epoch.
      *  @param _fullBonusLength Amount of seconds the sale lasts in the full bonus period.
      *  @param _partialWithdrawalLength Amount of seconds the sale lasts in the partial withdrawal period.
      *  @param _withdrawalLockUpLength Amount of seconds the sale lasts in the withdrawal lockup period.
@@ -106,7 +106,7 @@ contract IICO {
         });
     }
 
-    /** @dev Set the token. Must only be called after the IICO contract receive the tokens to be sold.
+    /** @dev Set the token. Must only be called after the IICO contract receives the tokens to be sold.
      *  @param _token The token to be sold.
      */
     function setToken(ERC20 _token) public onlyOwner {
@@ -116,19 +116,19 @@ contract IICO {
         tokensForSale = token.balanceOf(this);
     }
 
-    /** @dev Submit a bid. The caller must give the exact position the bid must be inserted in the list.
-     *  In practice use searchAndBid to avoid the position being incorrect due a new bid being inserted changing the position the bid must be inserted.
-     *  @param _maxVal The maximum valuation given by the contributor. If the amount raised is higher, the bid is cancelled and the contributor refunded because it prefers refund instead of this level of dilution. To buy no matter what, use INFINITY.
-     *  @param _next The bidID of next bid of the bid which will inserted.
+    /** @dev Submit a bid. The caller must give the exact position the bid must be inserted into in the list.
+     *  In practice, use searchAndBid to avoid the position being incorrect due to a new bid being inserted and changing the position the bid must be inserted at.
+     *  @param _maxVal The maximum valuation given by the contributor. If the amount raised is higher, the bid is cancelled and the contributor refunded because it prefers a refund instead of this level of dilution. To buy no matter what, use INFINITY.
+     *  @param _next The bidID of the next bid in the list.
      */
     function submitBid(uint _maxVal, uint _next) public payable {
         Bid storage nextBid = bids[_next];
         uint prev = nextBid.prev;
         Bid storage prevBid = bids[prev];
-        require(_maxVal >= prevBid.maxVal && _maxVal < nextBid.maxVal); // The new bid maxVal is higher than the previous and strictly lower than the next.
-        require(now >= startTime && now < endTime); // Check the bids are open.
+        require(_maxVal >= prevBid.maxVal && _maxVal < nextBid.maxVal); // The new bid maxVal is higher than the previous one and strictly lower than the next one.
+        require(now >= startTime && now < endTime); // Check that the bids are still open.
 
-        ++lastBidID; // Increment the lastBidID. It will be the one of the bid which will be inserted.
+        ++lastBidID; // Increment the lastBidID. It will be the new bid's ID.
         // Update the pointers of neighboring bids.
         prevBid.next = lastBidID;
         nextBid.prev = lastBidID;
@@ -150,21 +150,21 @@ contract IICO {
     }
 
 
-    /** @dev Search the correct insertion spot and submit a bid.
+    /** @dev Search for the correct insertion spot and submit a bid.
      *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
-     *  The UI must first call search to find the best point to start the search and consume the least amount of gas.
-     *  Using this function instead of calling submitBid directly prevents it to fail in the case that new bids would be added before the transaction is executed.
-     *  @param _maxVal The maximum valuation given by the contributor. If the amount raised is higher, the bid is cancelled and the contributor refunded because it prefers refund instead of this level of dilution. To buy no matter what, use INFINITY.
-     *  @param _next The bidID of next bid of the bid which will inserted.
+     *  The UI must first call search to find the best point to start the search so it consumes the least amount of gas possible.
+     *  Using this function instead of calling submitBid directly prevents it from failing in the case where new bids are added before the transaction is executed.
+     *  @param _maxVal The maximum valuation given by the contributor. If the amount raised is higher, the bid is cancelled and the contributor refunded because it prefers a refund instead of this level of dilution. To buy no matter what, use INFINITY.
+     *  @param _next The bidID of the next bid in the list.
      */
     function searchAndBid(uint _maxVal, uint _next) public payable {
         submitBid(_maxVal, search(_maxVal,_next));
     }
 
-    /** @dev Withdraw a bid. Can only be called before the end of the withdrawal lock.
-     *  Withdrawing a bid divides the bonus by 3.
-     *  For the automatic withdrawal, use the redeem function.
-     *  @param _bidID ID of the bid to withdraw.
+    /** @dev Withdraw a bid. Can only be called before the end of the withdrawal lock period.
+     *  Withdrawing a bid divides its bonus by 3.
+     *  For retrieving ETH after an automatic withdrawal, use the redeem function.
+     *  @param _bidID The ID of the bid to withdraw.
      */
     function withdraw(uint _bidID) public {
         Bid storage bid = bids[_bidID];
@@ -174,7 +174,7 @@ contract IICO {
 
         bid.withdrawn = true;
 
-        // Before endFullBonusTime, everything is refunded. Otherwise an amount decreasing linearly from endFullBonusTime to withdrawalLockTime.
+        // Before endFullBonusTime, everything is refunded. Otherwise, an amount decreasing linearly from endFullBonusTime to withdrawalLockTime is refunded.
         uint refund = (now < endFullBonusTime) ? bid.contrib : (bid.contrib * (withdrawalLockTime - now)) / (withdrawalLockTime - endFullBonusTime);
         assert(refund <= bid.contrib); // Make sure that we don't refund more than the contribution. Would a bug arise, we prefer blocking withdrawal than letting someone steal money.
         bid.contrib -= refund;
@@ -185,7 +185,7 @@ contract IICO {
 
     /** @dev Finalize by finding the cut-off bid.
      *  Since the amount of bids is not bounded, this function may have to be called multiple times.
-     *  The function is in O(min(n,_maxIt)) where n is the amount of bids. In total it will perform O(n) computations, possibly in multiple calls.
+     *  The function is O(min(n,_maxIt)) where n is the amount of bids. In total it will perform O(n) computations, possibly in multiple calls.
      *  Each call only has a O(1) storage write operations.
      *  @param _maxIt The maximum amount of bids to go through. This value must be set in order to not exceed the gas limit.
      */
@@ -198,7 +198,7 @@ contract IICO {
         uint localSumAcceptedContrib = sumAcceptedContrib;
         uint localSumAcceptedVirtualContrib = sumAcceptedVirtualContrib;
 
-        // Search for the cut-off while counting the contributions.
+        // Search for the cut-off bid while adding the contributions.
         for (uint it = 0; it < _maxIt && !finalized; ++it) {
             Bid storage bid = bids[localCutOffBidID];
             if (bid.contrib+localSumAcceptedContrib < bid.maxVal) { // We haven't found the cut-off yet.
@@ -207,13 +207,13 @@ contract IICO {
                 localCutOffBidID = bid.prev; // Go to previous bid.
             } else { // We found the cut-off. This bid will be taken partially.
                 finalized = true;
-                uint contribCutOff = bid.maxVal >= localSumAcceptedContrib ? bid.maxVal - localSumAcceptedContrib : 0; // The contribution of the cut-off bid. The amount which remains to go to the maximum valuation of the cut-off bid if any.
-                contribCutOff = contribCutOff < bid.contrib ? contribCutOff : bid.contrib; // The contribution can be at max the one given by the contributor. This line should not be required but is added as an extra security measure.
-                bid.contributor.send(bid.contrib-contribCutOff); // Send the non-accepted part. Use of send in order not to block in case the contributor fallback would revert.
+                uint contribCutOff = bid.maxVal >= localSumAcceptedContrib ? bid.maxVal - localSumAcceptedContrib : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
+                contribCutOff = contribCutOff < bid.contrib ? contribCutOff : bid.contrib; // The amount that stays in the sale should not be more than the original contribution. This line is not required but it is added as an extra security measure.
+                bid.contributor.send(bid.contrib-contribCutOff); // Send the non-accepted part. Use send in order to not block if the contributor's fallback reverts.
                 bid.contrib = contribCutOff; // Update the contribution value.
                 localSumAcceptedContrib += bid.contrib;
                 localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
-                beneficiary.send(localSumAcceptedContrib); // Use of send in order not to allow the beneficiary to block the finalization.
+                beneficiary.send(localSumAcceptedContrib); // Use send in order to not block if the contributor's fallback reverts.
             }
         }
 
@@ -223,7 +223,7 @@ contract IICO {
         sumAcceptedVirtualContrib = localSumAcceptedVirtualContrib;
     }
 
-    /** @dev Redeem a bid. If the bid is accepted, send the tokens, otherwise send the ethers back.
+    /** @dev Redeem a bid. If the bid is accepted, send the tokens, otherwise refund the ETH.
      *  Note that anyone can call this function, not only the party which made the bid.
      *  @param _bidID ID of the bid to withdraw.
      */
@@ -236,7 +236,7 @@ contract IICO {
         bid.redeemed=true;
         if (bid.maxVal > cutOffBid.maxVal || (bid.maxVal == cutOffBid.maxVal && _bidID >= cutOffBidID)) // Give tokens if the bid is accepted.
             token.transfer(bid.contributor, (tokensForSale * (bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR)) / sumAcceptedVirtualContrib);
-        else                                                                                      // Reimburse otherwise.
+        else                                                                                            // Reimburse ETH otherwise.
             bid.contributor.transfer(bid.contrib);
     }
 
@@ -244,13 +244,13 @@ contract IICO {
      *  This allows users to bid and get their tokens back using only send operations.
      */
     function () public payable {
-        if (msg.value != 0 && now >= startTime && now < endTime) // Make some bid with an infinite maxVal if some ETH were sent.
-            submitBid(INFINITY,TAIL);
-        else if (msg.value == 0 && finalized)                    // Redeem all the non-already redeemed bids if no ETH were sent.
+        if (msg.value != 0 && now >= startTime && now < endTime) // Make a bid with an infinite maxVal if some ETH was sent.
+            submitBid(INFINITY, TAIL);
+        else if (msg.value == 0 && finalized)                    // Else, redeem all the non redeemed bids if no ETH was sent.
             for (uint i = 0; i < contributorBidIDs[msg.sender].length; ++i)
                 if (!bids[contributorBidIDs[msg.sender][i]].redeemed)
                     redeem(contributorBidIDs[msg.sender][i]);
-        else                                                     // Otherwise no actions are possible.
+        else                                                     // Otherwise, no actions are possible.
             revert();
     }
 
@@ -259,8 +259,8 @@ contract IICO {
     /** @dev Search for the correct insertion spot of a bid.
      *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
      *  @param _maxVal The maximum valuation given by the contributor. Or INFINITY if no maximum valuation is given.
-     *  @param _nextStart The bidID of next bid in the initial position to start the search.
-     *  @return nextInsert The bidID of next bid the bid must be inserted.
+     *  @param _nextStart The bidID of the next bid from the initial position to start the search from.
+     *  @return nextInsert The bidID of the next bid from the position the bid must be inserted at.
      */
     function search(uint _maxVal, uint _nextStart) constant public returns(uint nextInsert) {
         uint next = _nextStart;
@@ -273,9 +273,9 @@ contract IICO {
 
             if (_maxVal < prevBid.maxVal)       // It should be inserted before.
                 next = prev;
-            else if (_maxVal >= nextBid.maxVal) // It should be inserted after. The second value we sort by is bidID. Those are increasing, thus if the next bid is of same maxVal, we should insert after.
+            else if (_maxVal >= nextBid.maxVal) // It should be inserted after. The second value we sort by is bidID. Those are increasing, thus if the next bid is of the same maxVal, we should insert after it.
                 next = nextBid.next;
-            else                                // We found out the insertion point.
+            else                                // We found the insertion point.
                 found = true;
         }
 
@@ -283,7 +283,7 @@ contract IICO {
     }
 
     /** @dev Return the current bonus. The bonus only changes in 1/BONUS_DIVISOR increments.
-     *  @return b The bonus expressed in 1/BONUS_DIVISOR.
+     *  @return b The bonus expressed in 1/BONUS_DIVISOR. Will be normalized by BONUS_DIVISOR. For example for a 20% bonus, _maxBonus must be 0.2 * BONUS_DIVISOR.
      */
     function bonus() public constant returns(uint b) {
         if (now < endFullBonusTime) // Full bonus.
@@ -295,10 +295,10 @@ contract IICO {
     }
 
     /** @dev Get the total contribution of an address.
-     *  It can be used for KYC threshold.
-     *  The function is O(n) where n is the amount of bids by a the contributor.
-     *  This means the contributor can make totalContrib(contributor) reverts due to out of gas on purpose.
-     *  @param _contributor The contributor the contribution will be returned.
+     *  This can be used for a KYC threshold.
+     *  This function is O(n) where n is the amount of bids made by the contributor.
+     *  This means that the contributor can make totalContrib(contributor) revert due to an out of gas error on purpose.
+     *  @param _contributor The contributor whose contribution will be returned.
      *  @return contribution The total contribution of the contributor.
      */
     function totalContrib(address _contributor) public constant returns (uint contribution) {
