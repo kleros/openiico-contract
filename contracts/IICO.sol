@@ -60,7 +60,7 @@ contract IICO {
 
     /* *** Finalization variables *** */
     bool public finalized;                 // True when the cutting bid has been found. The following variables are final only after finalized==true.
-    uint public cutOffBidID = TAIL;        // The first accepted bid. All bids before it are accepted.
+    uint public cutOffBidID = TAIL;        // The first accepted bid. All bids after it are accepted.
     uint public sumAcceptedContrib;        // The sum of accepted contributions.
     uint public sumAcceptedVirtualContrib; // The sum of virtual (taking into account bonuses) contributions.
 
