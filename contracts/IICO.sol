@@ -332,5 +332,7 @@ contract IICO {
                 }
             }
         }
+
+        if (now < withdrawalLockTime) amountCommitted = 0;
     }
 }
