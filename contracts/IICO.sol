@@ -309,25 +309,30 @@ contract IICO {
     /* *** Interface Views *** */
 
     /**
-     * @dev Get the current valuations, with bonus not taken into account and taken into account.
-     * @return The current valuations, with bonus not taken into account and taken into account.
+     * @dev Get the current valuation and the amount of ETH committed to the sale.
+     * @return The current valuation and the amount of ETH committed to the sale.
      */
-    function valuation() public view returns (uint localSumAcceptedContrib, uint localSumAcceptedVirtualContrib) {
-        uint localCutOffBidID = cutOffBidID;
+    function valuationAndAmountCommitted() public view returns (uint valuation, uint amountCommitted) {
+        bool capped = false;
+        uint localCutOffBidID = bids[TAIL].prev;
 
-        // Search for the cut-off bid while adding the contributions.
-        while (true) {
+        // Loop over all bids
+        while (localCutOffBidID != TAIL) {
             Bid storage bid = bids[localCutOffBidID];
-            if (bid.contrib + localSumAcceptedContrib < bid.maxVal) { // We haven't found the cut-off yet.
-                localSumAcceptedContrib        += bid.contrib;
-                localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
+            if (!capped && (bid.contrib + valuation < bid.maxVal)) { // We haven't found the cut-off yet.
+                valuation += bid.contrib;
+                amountCommitted += bid.contrib;
                 localCutOffBidID = bid.prev; // Go to the previous bid.
             } else { // We found the cut-off bid. This bid will be taken partially.
-                uint contribCutOff = bid.maxVal >= localSumAcceptedContrib ? bid.maxVal - localSumAcceptedContrib : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
-                localSumAcceptedContrib += contribCutOff;
-                localSumAcceptedVirtualContrib += contribCutOff + (contribCutOff * bid.bonus) / BONUS_DIVISOR;
-                break;
+                valuation += bid.contrib;
+                if (!capped) {
+                    uint contribCutOff = bid.maxVal >= valuation ? bid.maxVal - valuation : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
+                    amountCommitted += contribCutOff;
+                    capped = true;
+                }
             }
         }
+
+        if (now < withdrawalLockTime) amountCommitted = 0;
     }
 }
