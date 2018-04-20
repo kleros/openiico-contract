@@ -21,8 +21,8 @@ import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 contract IICO {
 
     /* *** General *** */
-    address owner;       // The one setting up the contract.
-    address beneficiary; // The address which will get the funds.
+    address public owner;       // The one setting up the contract.
+    address public beneficiary; // The address which will get the funds.
 
     /* *** Bid *** */
     uint constant HEAD = 0;            // Minimum value used for both the maxVal and bidID of the head of the linked list.
