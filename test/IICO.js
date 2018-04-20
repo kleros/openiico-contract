@@ -4,5 +4,6 @@ const Token = artifacts.require('zeppelin-solidity/MintableToken.sol')
 const IICO = artifacts.require('IICO.sol')
 
 contract('IICO', function (accounts) {
-    
+
+  
 })

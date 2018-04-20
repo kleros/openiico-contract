@@ -74,14 +74,16 @@ contract IICO {
      *  @param _partialWithdrawalLength Amount of seconds the sale lasts in the partial withdrawal period.
      *  @param _withdrawalLockUpLength Amount of seconds the sale lasts in the withdrawal lockup period.
      *  @param _maxBonus The maximum bonus. Will be normalized by BONUS_DIVISOR. For example for a 20% bonus, _maxBonus must be 0.2 * BONUS_DIVISOR.
+     *  @param _beneficiary The party which will get the funds of the token sale.
      */
-    function IICO(uint _startTime, uint _fullBonusLength, uint _partialWithdrawalLength, uint _withdrawalLockUpLength, uint _maxBonus) public {
+    function IICO(uint _startTime, uint _fullBonusLength, uint _partialWithdrawalLength, uint _withdrawalLockUpLength, uint _maxBonus, address _beneficiary) public {
         owner = msg.sender;
         startTime = _startTime;
         endFullBonusTime = startTime + _fullBonusLength;
         withdrawalLockTime = endFullBonusTime + _partialWithdrawalLength;
         endTime = withdrawalLockTime + _withdrawalLockUpLength;
         maxBonus = _maxBonus;
+        beneficiary = _beneficiary;
 
         // Add the virtual bids. This simplifies other functions.
         bids[HEAD] = Bid({
