@@ -325,7 +325,6 @@ contract IICO {
                 valuation += bid.contrib;
                 virtualValuation += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
                 amountCommitted += bid.contrib;
-                localCutOffBidID = bid.prev; // Go to the previous bid.
             } else { // We found the cut-off bid. This bid will be taken partially.
                 valuation += bid.contrib;
                 virtualValuation += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
@@ -335,6 +334,7 @@ contract IICO {
                     capped = true;
                 }
             }
+            localCutOffBidID = bid.prev; // Go to the previous bid.
         }
 
         if (now < withdrawalLockTime) amountCommitted = 0;
