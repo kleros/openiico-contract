@@ -314,7 +314,7 @@ contract IICO {
      * @dev Get the current valuation and cut off bid's details.
      * @return The current valuation and cut off bid's details.
      */
-    function valuationAndCutOff() public view returns (uint valuation, uint cutOffMaxVal, uint cutOffID) {
+    function valuationAndCutOff() public view returns (uint valuation, uint virtualValuation, uint cutOffBidID, uint cutOffBidMaxVal, uint cutOffBidContrib) {
         uint localCutOffBidID = bids[TAIL].prev;
 
         // Loop over all bids or until cut off bid is found
@@ -322,15 +322,17 @@ contract IICO {
             Bid storage bid = bids[localCutOffBidID];
             if (bid.contrib + valuation < bid.maxVal) { // We haven't found the cut-off yet.
                 valuation += bid.contrib;
+                virtualValuation += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
                 localCutOffBidID = bid.prev; // Go to the previous bid.
             } else { // We found the cut-off bid. This bid will be taken partially.
-                uint contribCutOff = bid.maxVal >= valuation ? bid.maxVal - valuation : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
-                valuation += contribCutOff;
+                cutOffBidContrib = bid.maxVal >= valuation ? bid.maxVal - valuation : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
+                valuation += cutOffBidContrib;
+                virtualValuation += cutOffBidContrib + (cutOffBidContrib * bid.bonus) / BONUS_DIVISOR;
                 break;
             }
         }
 
-        cutOffMaxVal = bids[localCutOffBidID].maxVal;
-        cutOffID = localCutOffBidID;
+        cutOffBidMaxVal = bids[localCutOffBidID].maxVal;
+        cutOffBidID = localCutOffBidID;
     }
 }
