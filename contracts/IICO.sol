@@ -250,8 +250,10 @@ contract IICO {
             submitBid(INFINITY, TAIL);
         else if (msg.value == 0 && finalized)                    // Else, redeem all the non redeemed bids if no ETH was sent.
             for (uint i = 0; i < contributorBidIDs[msg.sender].length; ++i)
+            {
                 if (!bids[contributorBidIDs[msg.sender][i]].redeemed)
                     redeem(contributorBidIDs[msg.sender][i]);
+            }
         else                                                     // Otherwise, no actions are possible.
             revert();
     }
