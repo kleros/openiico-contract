@@ -2,7 +2,7 @@
  *  @author Clément Lesaege - <clement@lesaege.com>
  */
 
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.23;
 
 import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
@@ -317,25 +317,24 @@ contract IICO {
      *  This function is O(n), where n is the amount of bids. This could exceed the gas limit, therefore this function should only be used for interface display and not by other contracts.
      *  @return The current valuation and cut off bid's details.
      */
-    function valuationAndCutOff() public view returns (uint valuation, uint virtualValuation, uint cutOffBidID, uint cutOffBidMaxVal, uint cutOffBidContrib) {
-        uint localCutOffBidID = bids[TAIL].prev;
+    function valuationAndCutOff() public view returns (uint valuation, uint virtualValuation, uint currentCutOffBidID, uint currentCutOffBidMaxVal, uint currentCutOffBidContrib) {
+        currentCutOffBidID = bids[TAIL].prev;
 
         // Loop over all bids or until cut off bid is found
-        while (localCutOffBidID != HEAD) {
-            Bid storage bid = bids[localCutOffBidID];
+        while (currentCutOffBidID != HEAD) {
+            Bid storage bid = bids[currentCutOffBidID];
             if (bid.contrib + valuation < bid.maxVal) { // We haven't found the cut-off yet.
                 valuation += bid.contrib;
                 virtualValuation += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
-                localCutOffBidID = bid.prev; // Go to the previous bid.
+                currentCutOffBidID = bid.prev; // Go to the previous bid.
             } else { // We found the cut-off bid. This bid will be taken partially.
-                cutOffBidContrib = bid.maxVal >= valuation ? bid.maxVal - valuation : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
-                valuation += cutOffBidContrib;
-                virtualValuation += cutOffBidContrib + (cutOffBidContrib * bid.bonus) / BONUS_DIVISOR;
+                currentCutOffBidContrib = bid.maxVal >= valuation ? bid.maxVal - valuation : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
+                valuation += currentCutOffBidContrib;
+                virtualValuation += currentCutOffBidContrib + (currentCutOffBidContrib * bid.bonus) / BONUS_DIVISOR;
                 break;
             }
         }
 
-        cutOffBidMaxVal = bids[localCutOffBidID].maxVal;
-        cutOffBidID = localCutOffBidID;
+        currentCutOffBidMaxVal = bids[currentCutOffBidID].maxVal;
     }
 }
