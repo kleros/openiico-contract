@@ -312,9 +312,9 @@ contract IICO {
 
     /* *** Interface Views *** */
 
-    /**
-     * @dev Get the current valuation and cut off bid's details.
-     * @return The current valuation and cut off bid's details.
+    /** @dev Get the current valuation and cut off bid's details.
+     *  This function is O(n), where n is the amount of bids. This could exceed the gas limit, therefore this function should only be used for interface display and not by other contracts.
+     *  @return The current valuation and cut off bid's details.
      */
     function valuationAndCutOff() public view returns (uint valuation, uint virtualValuation, uint cutOffBidID, uint cutOffBidMaxVal, uint cutOffBidContrib) {
         uint localCutOffBidID = bids[TAIL].prev;
