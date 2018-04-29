@@ -112,7 +112,7 @@ contract IICO {
      *  @param _token The token to be sold.
      */
     function setToken(ERC20 _token) public onlyOwner {
-        require(address(token) == 0x0);
+        require(address(token) == 0x0); // Make sure the token is not already set.
 
         token = _token;
         tokensForSale = token.balanceOf(this);
