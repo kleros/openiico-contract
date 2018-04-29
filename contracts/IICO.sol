@@ -76,8 +76,9 @@ contract IICO {
      *  @param _maxBonus The maximum bonus. Will be normalized by BONUS_DIVISOR. For example for a 20% bonus, _maxBonus must be 0.2 * BONUS_DIVISOR.
      *  @param _beneficiary The party which will get the funds of the token sale.
      */
-    function IICO(uint _startTime, uint _fullBonusLength, uint _partialWithdrawalLength, uint _withdrawalLockUpLength, uint _maxBonus, address _beneficiary) public {
+    constructor(uint _startTime, uint _fullBonusLength, uint _partialWithdrawalLength, uint _withdrawalLockUpLength, uint _maxBonus, address _beneficiary) public {
         owner = msg.sender;
+        require(_startTime > now); //sanity check
         startTime = _startTime;
         endFullBonusTime = startTime + _fullBonusLength;
         withdrawalLockTime = endFullBonusTime + _partialWithdrawalLength;
@@ -92,7 +93,7 @@ contract IICO {
             maxVal: HEAD,
             contrib: 0,
             bonus: 0,
-            contributor: 0x0,
+            contributor: address(0), //format it to be an address, no warning
             withdrawn: false,
             redeemed: false
         });
@@ -102,7 +103,7 @@ contract IICO {
             maxVal: TAIL,
             contrib: 0,
             bonus: 0,
-            contributor: 0x0,
+            contributor: address(0), //format it to be an address, no warning
             withdrawn: false,
             redeemed: false
         });
@@ -112,7 +113,7 @@ contract IICO {
      *  @param _token The token to be sold.
      */
     function setToken(ERC20 _token) public onlyOwner {
-        require(address(token) == 0x0);
+        require(address(token) != address(0)); //Token address must be different from address 0x0....
 
         token = _token;
         tokensForSale = token.balanceOf(this);
@@ -201,7 +202,7 @@ contract IICO {
         uint localSumAcceptedVirtualContrib = sumAcceptedVirtualContrib;
 
         // Search for the cut-off bid while adding the contributions.
-        for (uint it = 0; it < _maxIt && !finalized; ++it) {
+        for (uint it = 0; it < _maxIt ; ++it) {
             Bid storage bid = bids[localCutOffBidID];
             if (bid.contrib+localSumAcceptedContrib < bid.maxVal) { // We haven't found the cut-off yet.
                 localSumAcceptedContrib        += bid.contrib;
@@ -249,7 +250,7 @@ contract IICO {
         if (msg.value != 0 && now >= startTime && now < endTime) // Make a bid with an infinite maxVal if some ETH was sent.
             submitBid(INFINITY, TAIL);
         else if (msg.value == 0 && finalized)                    // Else, redeem all the non redeemed bids if no ETH was sent.
-            for (uint i = 0; i < contributorBidIDs[msg.sender].length; ++i)
+            for (uint i = 0; i < contributorBidIDs[msg.sender].length; ++i) //WARNING: High gas consumption for high length, possible transaction fail, no gas revert
             {
                 if (!bids[contributorBidIDs[msg.sender][i]].redeemed)
                     redeem(contributorBidIDs[msg.sender][i]);
@@ -269,6 +270,7 @@ contract IICO {
     function search(uint _maxVal, uint _nextStart) constant public returns(uint nextInsert) {
         uint next = _nextStart;
         bool found;
+        if (_maxVal == 0) _maxVal = INFINITY;
 
         while(!found) { // While we aren't at the insertion point.
             Bid storage nextBid = bids[next];
