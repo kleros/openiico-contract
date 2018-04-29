@@ -92,7 +92,7 @@ contract IICO {
             maxVal: HEAD,
             contrib: 0,
             bonus: 0,
-            contributor: 0x0,
+            contributor: address(0),
             withdrawn: false,
             redeemed: false
         });
@@ -102,7 +102,7 @@ contract IICO {
             maxVal: TAIL,
             contrib: 0,
             bonus: 0,
-            contributor: 0x0,
+            contributor: address(0),
             withdrawn: false,
             redeemed: false
         });
@@ -112,7 +112,7 @@ contract IICO {
      *  @param _token The token to be sold.
      */
     function setToken(ERC20 _token) public onlyOwner {
-        require(address(token) == 0x0); // Make sure the token is not already set.
+        require(address(token) == address(0)); // Make sure the token is not already set.
 
         token = _token;
         tokensForSale = token.balanceOf(this);
@@ -243,6 +243,7 @@ contract IICO {
     }
 
     /** @dev Fallback. Make a bid if ETH are sent. Redeem all the bids of the contributor otherwise.
+     *  Note that the contributor could make this function go out of gas if it has too much bids. This in not a problem as it is still possible to redeem using the redeem function directly.
      *  This allows users to bid and get their tokens back using only send operations.
      */
     function () public payable {
