@@ -21,3 +21,14 @@ Security notes:
 - There is a O(1) griefing factor attack to this contract. However, the griefing factor is small. A user could make a lot of useless bids to make the `finalize` function cost more gas to finish or require calling it multiple times due to gas limit.
 The griefing factor is small as the attacker needs to pay gas for storage write operations while the defender only needs to pay for storage read operations (plus a constant amount of storage write operations per `finalize` call).
 - Parties calling the contract first need to call `search` to give the starting value of the search. Again, an attacker could make a lot of bids at high gas price in order in order to make a TX fail (due to the search taking more time than the max gas because the insertion point would have been changed by the new bids). But again this is a O(1) griefing factor with a really low griefing factor.
+
+
+## Running tests
+
+1. `git clone https://github.com/kleros/openiico-contract`
+
+2. `cd openiico-contract`
+
+3. `truffle test ./test/IICO.js`
+
+[Truffle](http://truffleframework.com/) should be installed: `npm install -g truffle`
