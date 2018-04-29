@@ -2,7 +2,7 @@
  *  @author Clément Lesaege - <clement@lesaege.com>
  */
 
-pragma solidity ^0.4.18;
+pragma solidity 0.4.23; //Stable version to 29/04/2018
 
 import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
@@ -76,8 +76,9 @@ contract IICO {
      *  @param _maxBonus The maximum bonus. Will be normalized by BONUS_DIVISOR. For example for a 20% bonus, _maxBonus must be 0.2 * BONUS_DIVISOR.
      *  @param _beneficiary The party which will get the funds of the token sale.
      */
-    function IICO(uint _startTime, uint _fullBonusLength, uint _partialWithdrawalLength, uint _withdrawalLockUpLength, uint _maxBonus, address _beneficiary) public {
+    constructor(uint _startTime, uint _fullBonusLength, uint _partialWithdrawalLength, uint _withdrawalLockUpLength, uint _maxBonus, address _beneficiary) public {
         owner = msg.sender;
+        require(_startTime > now); //sanity check
         startTime = _startTime;
         endFullBonusTime = startTime + _fullBonusLength;
         withdrawalLockTime = endFullBonusTime + _partialWithdrawalLength;
@@ -250,7 +251,7 @@ contract IICO {
         if (msg.value != 0 && now >= startTime && now < endTime) // Make a bid with an infinite maxVal if some ETH was sent.
             submitBid(INFINITY, TAIL);
         else if (msg.value == 0 && finalized)                    // Else, redeem all the non redeemed bids if no ETH was sent.
-            for (uint i = 0; i < contributorBidIDs[msg.sender].length; ++i)
+            for (uint i = 0; i < contributorBidIDs[msg.sender].length; ++i) //WARNING: High gas consumption for high length, possible transaction fail, no gas revert
             {
                 if (!bids[contributorBidIDs[msg.sender][i]].redeemed)
                     redeem(contributorBidIDs[msg.sender][i]);
@@ -270,6 +271,7 @@ contract IICO {
     function search(uint _maxVal, uint _nextStart) view public returns(uint nextInsert) {
         uint next = _nextStart;
         bool found;
+        if (_maxVal == 0) _maxVal = INFINITY;
 
         while(!found) { // While we aren't at the insertion point.
             Bid storage nextBid = bids[next];
