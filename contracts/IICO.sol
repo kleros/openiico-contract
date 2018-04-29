@@ -93,7 +93,7 @@ contract IICO {
             maxVal: HEAD,
             contrib: 0,
             bonus: 0,
-            contributor: address(0), //format it to be an address, no warning
+            contributor: address(0),
             withdrawn: false,
             redeemed: false
         });
@@ -103,7 +103,7 @@ contract IICO {
             maxVal: TAIL,
             contrib: 0,
             bonus: 0,
-            contributor: address(0), //format it to be an address, no warning
+            contributor: address(0),
             withdrawn: false,
             redeemed: false
         });
@@ -113,7 +113,7 @@ contract IICO {
      *  @param _token The token to be sold.
      */
     function setToken(ERC20 _token) public onlyOwner {
-        require(address(token) != address(0)); //Token address must be different from address 0x0....
+        require(address(token) == address(0)); // Make sure the token is not already set.
 
         token = _token;
         tokensForSale = token.balanceOf(this);
@@ -202,7 +202,7 @@ contract IICO {
         uint localSumAcceptedVirtualContrib = sumAcceptedVirtualContrib;
 
         // Search for the cut-off bid while adding the contributions.
-        for (uint it = 0; it < _maxIt ; ++it) {
+        for (uint it = 0; it < _maxIt && !finalized; ++it) {
             Bid storage bid = bids[localCutOffBidID];
             if (bid.contrib+localSumAcceptedContrib < bid.maxVal) { // We haven't found the cut-off yet.
                 localSumAcceptedContrib        += bid.contrib;
@@ -244,6 +244,7 @@ contract IICO {
     }
 
     /** @dev Fallback. Make a bid if ETH are sent. Redeem all the bids of the contributor otherwise.
+     *  Note that the contributor could make this function go out of gas if it has too much bids. This in not a problem as it is still possible to redeem using the redeem function directly.
      *  This allows users to bid and get their tokens back using only send operations.
      */
     function () public payable {
@@ -259,7 +260,7 @@ contract IICO {
             revert();
     }
 
-    /* *** Constant and View *** */
+    /* *** View Functions *** */
 
     /** @dev Search for the correct insertion spot of a bid.
      *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
@@ -267,7 +268,7 @@ contract IICO {
      *  @param _nextStart The bidID of the next bid from the initial position to start the search from.
      *  @return nextInsert The bidID of the next bid from the position the bid must be inserted at.
      */
-    function search(uint _maxVal, uint _nextStart) constant public returns(uint nextInsert) {
+    function search(uint _maxVal, uint _nextStart) view public returns(uint nextInsert) {
         uint next = _nextStart;
         bool found;
         if (_maxVal == 0) _maxVal = INFINITY;
@@ -291,7 +292,7 @@ contract IICO {
     /** @dev Return the current bonus. The bonus only changes in 1/BONUS_DIVISOR increments.
      *  @return b The bonus expressed in 1/BONUS_DIVISOR. Will be normalized by BONUS_DIVISOR. For example for a 20% bonus, _maxBonus must be 0.2 * BONUS_DIVISOR.
      */
-    function bonus() public constant returns(uint b) {
+    function bonus() public view returns(uint b) {
         if (now < endFullBonusTime) // Full bonus.
             return maxBonus;
         else if (now > endTime)     // Assume no bonus after end.
@@ -307,16 +308,16 @@ contract IICO {
      *  @param _contributor The contributor whose contribution will be returned.
      *  @return contribution The total contribution of the contributor.
      */
-    function totalContrib(address _contributor) public constant returns (uint contribution) {
+    function totalContrib(address _contributor) public view returns (uint contribution) {
         for (uint i = 0; i < contributorBidIDs[_contributor].length; ++i)
             contribution += bids[contributorBidIDs[_contributor][i]].contrib;
     }
 
     /* *** Interface Views *** */
 
-    /**
-     * @dev Get the current valuation and cut off bid's details.
-     * @return The current valuation and cut off bid's details.
+    /** @dev Get the current valuation and cut off bid's details.
+     *  This function is O(n), where n is the amount of bids. This could exceed the gas limit, therefore this function should only be used for interface display and not by other contracts.
+     *  @return The current valuation and cut off bid's details.
      */
     function valuationAndCutOff() public view returns (uint valuation, uint virtualValuation, uint cutOffBidID, uint cutOffBidMaxVal, uint cutOffBidContrib) {
         uint localCutOffBidID = bids[TAIL].prev;
