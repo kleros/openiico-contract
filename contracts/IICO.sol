@@ -2,7 +2,7 @@
  *  @author Clément Lesaege - <clement@lesaege.com>
  */
 
-pragma solidity ^0.4.18;
+pragma solidity 0.4.23; //Stable version to 29/04/2018
 
 import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
