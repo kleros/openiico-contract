@@ -258,7 +258,7 @@ contract IICO {
             revert();
     }
 
-    /* *** Constant and View *** */
+    /* *** View Functions *** */
 
     /** @dev Search for the correct insertion spot of a bid.
      *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
@@ -266,7 +266,7 @@ contract IICO {
      *  @param _nextStart The bidID of the next bid from the initial position to start the search from.
      *  @return nextInsert The bidID of the next bid from the position the bid must be inserted at.
      */
-    function search(uint _maxVal, uint _nextStart) constant public returns(uint nextInsert) {
+    function search(uint _maxVal, uint _nextStart) view public returns(uint nextInsert) {
         uint next = _nextStart;
         bool found;
 
@@ -289,7 +289,7 @@ contract IICO {
     /** @dev Return the current bonus. The bonus only changes in 1/BONUS_DIVISOR increments.
      *  @return b The bonus expressed in 1/BONUS_DIVISOR. Will be normalized by BONUS_DIVISOR. For example for a 20% bonus, _maxBonus must be 0.2 * BONUS_DIVISOR.
      */
-    function bonus() public constant returns(uint b) {
+    function bonus() public view returns(uint b) {
         if (now < endFullBonusTime) // Full bonus.
             return maxBonus;
         else if (now > endTime)     // Assume no bonus after end.
@@ -305,7 +305,7 @@ contract IICO {
      *  @param _contributor The contributor whose contribution will be returned.
      *  @return contribution The total contribution of the contributor.
      */
-    function totalContrib(address _contributor) public constant returns (uint contribution) {
+    function totalContrib(address _contributor) public view returns (uint contribution) {
         for (uint i = 0; i < contributorBidIDs[_contributor].length; ++i)
             contribution += bids[contributorBidIDs[_contributor][i]].contrib;
     }
