@@ -64,6 +64,10 @@ contract IICO {
     uint public sumAcceptedContrib;        // The sum of accepted contributions.
     uint public sumAcceptedVirtualContrib; // The sum of virtual (taking into account bonuses) contributions.
 
+    /* *** Events *** */
+    event BidSubmitted(address indexed contributor, uint indexed bidID, uint indexed time);
+
+    /* *** Modifiers *** */
     modifier onlyOwner{ require(owner == msg.sender); _; }
 
     /* *** Functions Modifying the state *** */
@@ -149,6 +153,9 @@ contract IICO {
 
         // Add the bid to the list of bids by this contributor.
         contributorBidIDs[msg.sender].push(lastBidID);
+
+        // Emit event
+        emit BidSubmitted(msg.sender, lastBidID, now);
     }
 
 
