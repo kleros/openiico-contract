@@ -780,7 +780,6 @@ contract('IICO', function (accounts) {
     assert.equal(web3.eth.getBalance(buyerF).toNumber(), buyerFBalanceAtTheEndOfSale+0.1E18, 'The buyer F has not been reimbursed as it should')
     
     assert(Math.abs(web3.eth.getBalance(beneficiary).toNumber() - (beneficiaryBalanceAtTheEndOfSale+0.68E18))  <= 0.68E18/100, 'The beneficiary has not been paid correctly')
-    console.log(Math.abs((await token.balanceOf(buyerA)).toNumber() - 8.96E24))
     
     // Verify that the tokens are correctly distributed.
     // Allow up to 1% of error due to time not being prefect. For buyer A up to 2% because of time error both in bid and withdraw.
