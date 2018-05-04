@@ -23,7 +23,7 @@ contract('IICO', function (accounts) {
   let maxBonus = 2E8
   testAccount = buyerE
   
-
+  
   // Constructor
   it('Should create the contract with the initial values', async () => {
     let startTestTime = web3.eth.getBlock('latest').timestamp
@@ -721,7 +721,6 @@ contract('IICO', function (accounts) {
     assert((await token.balanceOf(buyerF)).toNumber() === 0, 'The buyer F has not been given the right amount of tokens')
   })
 
-  
   it('Should give back tokens to accepted bids and refund others. Some accepted, some without max bonus, one bid partially withdrawn', async () => {
     let startTestTime = web3.eth.getBlock('latest').timestamp
     let iico = await IICO.new(startTestTime+timeBeforeStart,fullBonusLength,partialWithdrawalLength, withdrawalLockUpLength,maxBonus,beneficiary,{from: owner})
@@ -729,7 +728,7 @@ contract('IICO', function (accounts) {
     let tailID = head[1]
     let tail = await iico.bids(head[1])
     let token = await MintableToken.new({from: owner})
-    await token.mint(iico.address,74.9333333333333333333333E24,{from: owner})
+    await token.mint(iico.address,75.36E24,{from: owner})
     await iico.setToken(token.address,{from: owner})
     
     
@@ -781,10 +780,11 @@ contract('IICO', function (accounts) {
     assert.equal(web3.eth.getBalance(buyerF).toNumber(), buyerFBalanceAtTheEndOfSale+0.1E18, 'The buyer F has not been reimbursed as it should')
     
     assert(Math.abs(web3.eth.getBalance(beneficiary).toNumber() - (beneficiaryBalanceAtTheEndOfSale+0.68E18))  <= 0.68E18/100, 'The beneficiary has not been paid correctly')
-
+    console.log(Math.abs((await token.balanceOf(buyerA)).toNumber() - 8.96E24))
+    
     // Verify that the tokens are correctly distributed.
-    // Allow up to 1% of error due to time not being prefect.
-    assert(Math.abs((await token.balanceOf(buyerA)).toNumber() - 8.533333333333E24) <= 8.533333333333E24/100, 'The buyer A has not been given the right amount of tokens')
+    // Allow up to 1% of error due to time not being prefect. For buyer A up to 2% because of time error both in bid and withdraw.
+    assert(Math.abs((await token.balanceOf(buyerA)).toNumber() - 8.96E24) <= 2*8.96E24/100, 'The buyer A has not been given the right amount of tokens')
     assert((await token.balanceOf(buyerB)).toNumber() === 0, 'The buyer B has not been given the right amount of tokens')
     assert(Math.abs((await token.balanceOf(buyerC)).toNumber() - 44.8E24) <= 44.8E24/100, 'The buyer C has not been given the right amount of tokens')
     assert(Math.abs((await token.balanceOf(buyerD)).toNumber() - 21.6E24) <= 21.6E24/100, 'The buyer D has not been given the right amount of tokens')

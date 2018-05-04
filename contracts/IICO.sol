@@ -180,7 +180,7 @@ contract IICO {
         uint refund = (now < endFullBonusTime) ? bid.contrib : (bid.contrib * (withdrawalLockTime - now)) / (withdrawalLockTime - endFullBonusTime);
         assert(refund <= bid.contrib); // Make sure that we don't refund more than the contribution. Would a bug arise, we prefer blocking withdrawal than letting someone steal money.
         bid.contrib -= refund;
-        bid.bonus /= 3; // Divide the bonus by 3.
+        bid.bonus = (2 * bid.bonus) / 3; // Remove one third of the bonus.
 
         msg.sender.transfer(refund);
     }
