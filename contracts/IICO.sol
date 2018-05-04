@@ -187,11 +187,7 @@ contract IICO {
         uint refund = (now < endFullBonusTime) ? bid.contrib : (bid.contrib * (withdrawalLockTime - now)) / (withdrawalLockTime - endFullBonusTime);
         assert(refund <= bid.contrib); // Make sure that we don't refund more than the contribution. Would a bug arise, we prefer blocking withdrawal than letting someone steal money.
         bid.contrib -= refund;
-<<<<<<< bdc5ca8dd81dcc4b99df4eb2fee4aebc11144aad
-        bid.bonus = (2 * bid.bonus) / 3; // Remove one third of the bonus.
-=======
         bid.bonus = (bid.bonus * 2) / 3; // Reduce the bonus by 1/3.
->>>>>>> fix: reduce bonus by 1/3 instead of dividing it by 3
 
         msg.sender.transfer(refund);
     }
@@ -226,7 +222,7 @@ contract IICO {
                 bid.contrib = contribCutOff; // Update the contribution value.
                 localSumAcceptedContrib += bid.contrib;
                 localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
-                beneficiary.send(localSumAcceptedContrib); // Use send in order to not block if the contributor's fallback reverts.
+                beneficiary.send(localSumAcceptedContrib); // Use send in order to not block if the beneficiary's fallback reverts.
             }
         }
 
