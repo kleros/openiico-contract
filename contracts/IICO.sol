@@ -215,7 +215,7 @@ contract IICO {
                 bid.contrib = contribCutOff; // Update the contribution value.
                 localSumAcceptedContrib += bid.contrib;
                 localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
-                beneficiary.send(localSumAcceptedContrib); // Use send in order to not block if the contributor's fallback reverts.
+                beneficiary.send(localSumAcceptedContrib); // Use send in order to not block if the beneficiary's fallback reverts.
             }
         }
 
