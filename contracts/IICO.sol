@@ -37,7 +37,7 @@ contract IICO {
         uint prev;            // bidID of the previous element.
         uint next;            // bidID of the next element.
         /* ***     Bid Members     *** */
-        uint maxValuation;          // Maximum valuation in wei beyond which the contributor prefers refund.
+        uint maxValuation;    // Maximum valuation in wei beyond which the contributor prefers refund.
         uint contrib;         // Contribution in wei.
         uint bonus;           // The numerator of the bonus that will be divided by BONUS_DIVISOR.
         address contributor;  // The contributor who placed the bid.
