@@ -64,6 +64,10 @@ contract IICO {
     uint public sumAcceptedContrib;        // The sum of accepted contributions.
     uint public sumAcceptedVirtualContrib; // The sum of virtual (taking into account bonuses) contributions.
 
+    /* *** Events *** */
+    event BidSubmitted(address indexed contributor, uint indexed bidID, uint indexed time);
+
+    /* *** Modifiers *** */
     modifier onlyOwner{ require(owner == msg.sender); _; }
 
     /* *** Functions Modifying the state *** */
@@ -149,6 +153,9 @@ contract IICO {
 
         // Add the bid to the list of bids by this contributor.
         contributorBidIDs[msg.sender].push(lastBidID);
+
+        // Emit event
+        emit BidSubmitted(msg.sender, lastBidID, now);
     }
 
 
@@ -180,7 +187,7 @@ contract IICO {
         uint refund = (now < endFullBonusTime) ? bid.contrib : (bid.contrib * (withdrawalLockTime - now)) / (withdrawalLockTime - endFullBonusTime);
         assert(refund <= bid.contrib); // Make sure that we don't refund more than the contribution. Would a bug arise, we prefer blocking withdrawal than letting someone steal money.
         bid.contrib -= refund;
-        bid.bonus = (2 * bid.bonus) / 3; // Remove one third of the bonus.
+        bid.bonus = (bid.bonus * 2) / 3; // Reduce the bonus by 1/3.
 
         msg.sender.transfer(refund);
     }
