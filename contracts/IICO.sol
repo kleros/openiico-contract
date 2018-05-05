@@ -25,19 +25,19 @@ contract IICO {
     address public beneficiary; // The address which will get the funds.
 
     /* *** Bid *** */
-    uint constant HEAD = 0;            // Minimum value used for both the maxVal and bidID of the head of the linked list.
-    uint constant TAIL = uint(-1);     // Maximum value used for both the maxVal and bidID of the tail of the linked list.
+    uint constant HEAD = 0;            // Minimum value used for both the maxValuation and bidID of the head of the linked list.
+    uint constant TAIL = uint(-1);     // Maximum value used for both the maxValuation and bidID of the tail of the linked list.
     uint constant INFINITY = uint(-2); // A value so high that a bid using it is guaranteed to succeed. Still lower than TAIL to be placed before TAIL.
     // A bid to buy tokens as long as the personal maximum valuation is not exceeded.
     // Bids are in a sorted doubly linked list.
-    // They are sorted in ascending order by (maxVal,bidID) where bidID is the ID and key of the bid in the mapping.
-    // The list contains two artificial bids HEAD and TAIL having respectively the minimum and maximum bidID and maxVal.
+    // They are sorted in ascending order by (maxValuation,bidID) where bidID is the ID and key of the bid in the mapping.
+    // The list contains two artificial bids HEAD and TAIL having respectively the minimum and maximum bidID and maxValuation.
     struct Bid {
         /* *** Linked List Members *** */
         uint prev;            // bidID of the previous element.
         uint next;            // bidID of the next element.
         /* ***     Bid Members     *** */
-        uint maxVal;          // Maximum valuation in wei beyond which the contributor prefers refund.
+        uint maxValuation;          // Maximum valuation in wei beyond which the contributor prefers refund.
         uint contrib;         // Contribution in wei.
         uint bonus;           // The numerator of the bonus that will be divided by BONUS_DIVISOR.
         address contributor;  // The contributor who placed the bid.
@@ -93,7 +93,7 @@ contract IICO {
         bids[HEAD] = Bid({
             prev: TAIL,
             next: TAIL,
-            maxVal: HEAD,
+            maxValuation: HEAD,
             contrib: 0,
             bonus: 0,
             contributor: address(0),
@@ -103,7 +103,7 @@ contract IICO {
         bids[TAIL] = Bid({
             prev: HEAD,
             next: HEAD,
-            maxVal: TAIL,
+            maxValuation: TAIL,
             contrib: 0,
             bonus: 0,
             contributor: address(0),
@@ -124,14 +124,14 @@ contract IICO {
 
     /** @dev Submit a bid. The caller must give the exact position the bid must be inserted into in the list.
      *  In practice, use searchAndBid to avoid the position being incorrect due to a new bid being inserted and changing the position the bid must be inserted at.
-     *  @param _maxVal The maximum valuation given by the contributor. If the amount raised is higher, the bid is cancelled and the contributor refunded because it prefers a refund instead of this level of dilution. To buy no matter what, use INFINITY.
+     *  @param _maxValuation The maximum valuation given by the contributor. If the amount raised is higher, the bid is cancelled and the contributor refunded because it prefers a refund instead of this level of dilution. To buy no matter what, use INFINITY.
      *  @param _next The bidID of the next bid in the list.
      */
-    function submitBid(uint _maxVal, uint _next) public payable {
+    function submitBid(uint _maxValuation, uint _next) public payable {
         Bid storage nextBid = bids[_next];
         uint prev = nextBid.prev;
         Bid storage prevBid = bids[prev];
-        require(_maxVal >= prevBid.maxVal && _maxVal < nextBid.maxVal); // The new bid maxVal is higher than the previous one and strictly lower than the next one.
+        require(_maxValuation >= prevBid.maxValuation && _maxValuation < nextBid.maxValuation); // The new bid maxValuation is higher than the previous one and strictly lower than the next one.
         require(now >= startTime && now < endTime); // Check that the bids are still open.
 
         ++lastBidID; // Increment the lastBidID. It will be the new bid's ID.
@@ -143,7 +143,7 @@ contract IICO {
         bids[lastBidID] = Bid({
             prev: prev,
             next: _next,
-            maxVal: _maxVal,
+            maxValuation: _maxValuation,
             contrib: msg.value,
             bonus: bonus(),
             contributor: msg.sender,
@@ -163,11 +163,11 @@ contract IICO {
      *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
      *  The UI must first call search to find the best point to start the search so it consumes the least amount of gas possible.
      *  Using this function instead of calling submitBid directly prevents it from failing in the case where new bids are added before the transaction is executed.
-     *  @param _maxVal The maximum valuation given by the contributor. If the amount raised is higher, the bid is cancelled and the contributor refunded because it prefers a refund instead of this level of dilution. To buy no matter what, use INFINITY.
+     *  @param _maxValuation The maximum valuation given by the contributor. If the amount raised is higher, the bid is cancelled and the contributor refunded because it prefers a refund instead of this level of dilution. To buy no matter what, use INFINITY.
      *  @param _next The bidID of the next bid in the list.
      */
-    function searchAndBid(uint _maxVal, uint _next) public payable {
-        submitBid(_maxVal, search(_maxVal,_next));
+    function searchAndBid(uint _maxValuation, uint _next) public payable {
+        submitBid(_maxValuation, search(_maxValuation,_next));
     }
 
     /** @dev Withdraw a bid. Can only be called before the end of the withdrawal lock period.
@@ -210,13 +210,13 @@ contract IICO {
         // Search for the cut-off bid while adding the contributions.
         for (uint it = 0; it < _maxIt && !finalized; ++it) {
             Bid storage bid = bids[localCutOffBidID];
-            if (bid.contrib+localSumAcceptedContrib < bid.maxVal) { // We haven't found the cut-off yet.
+            if (bid.contrib+localSumAcceptedContrib < bid.maxValuation) { // We haven't found the cut-off yet.
                 localSumAcceptedContrib        += bid.contrib;
                 localSumAcceptedVirtualContrib += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
                 localCutOffBidID = bid.prev; // Go to the previous bid.
             } else { // We found the cut-off. This bid will be taken partially.
                 finalized = true;
-                uint contribCutOff = bid.maxVal >= localSumAcceptedContrib ? bid.maxVal - localSumAcceptedContrib : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
+                uint contribCutOff = bid.maxValuation >= localSumAcceptedContrib ? bid.maxValuation - localSumAcceptedContrib : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxValuation.
                 contribCutOff = contribCutOff < bid.contrib ? contribCutOff : bid.contrib; // The amount that stays in the sale should not be more than the original contribution. This line is not required but it is added as an extra security measure.
                 bid.contributor.send(bid.contrib-contribCutOff); // Send the non-accepted part. Use send in order to not block if the contributor's fallback reverts.
                 bid.contrib = contribCutOff; // Update the contribution value.
@@ -243,7 +243,7 @@ contract IICO {
         require(!bid.redeemed);
 
         bid.redeemed=true;
-        if (bid.maxVal > cutOffBid.maxVal || (bid.maxVal == cutOffBid.maxVal && _bidID >= cutOffBidID)) // Give tokens if the bid is accepted.
+        if (bid.maxValuation > cutOffBid.maxValuation || (bid.maxValuation == cutOffBid.maxValuation && _bidID >= cutOffBidID)) // Give tokens if the bid is accepted.
             token.transfer(bid.contributor, (tokensForSale * (bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR)) / sumAcceptedVirtualContrib);
         else                                                                                            // Reimburse ETH otherwise.
             bid.contributor.transfer(bid.contrib);
@@ -254,7 +254,7 @@ contract IICO {
      *  This allows users to bid and get their tokens back using only send operations.
      */
     function () public payable {
-        if (msg.value != 0 && now >= startTime && now < endTime) // Make a bid with an infinite maxVal if some ETH was sent.
+        if (msg.value != 0 && now >= startTime && now < endTime) // Make a bid with an infinite maxValuation if some ETH was sent.
             submitBid(INFINITY, TAIL);
         else if (msg.value == 0 && finalized)                    // Else, redeem all the non redeemed bids if no ETH was sent.
             for (uint i = 0; i < contributorBidIDs[msg.sender].length; ++i)
@@ -270,11 +270,11 @@ contract IICO {
 
     /** @dev Search for the correct insertion spot of a bid.
      *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
-     *  @param _maxVal The maximum valuation given by the contributor. Or INFINITY if no maximum valuation is given.
+     *  @param _maxValuation The maximum valuation given by the contributor. Or INFINITY if no maximum valuation is given.
      *  @param _nextStart The bidID of the next bid from the initial position to start the search from.
      *  @return nextInsert The bidID of the next bid from the position the bid must be inserted at.
      */
-    function search(uint _maxVal, uint _nextStart) view public returns(uint nextInsert) {
+    function search(uint _maxValuation, uint _nextStart) view public returns(uint nextInsert) {
         uint next = _nextStart;
         bool found;
 
@@ -283,9 +283,9 @@ contract IICO {
             uint prev = nextBid.prev;
             Bid storage prevBid = bids[prev];
 
-            if (_maxVal < prevBid.maxVal)       // It should be inserted before.
+            if (_maxValuation < prevBid.maxValuation)       // It should be inserted before.
                 next = prev;
-            else if (_maxVal >= nextBid.maxVal) // It should be inserted after. The second value we sort by is bidID. Those are increasing, thus if the next bid is of the same maxVal, we should insert after it.
+            else if (_maxValuation >= nextBid.maxValuation) // It should be inserted after. The second value we sort by is bidID. Those are increasing, thus if the next bid is of the same maxValuation, we should insert after it.
                 next = nextBid.next;
             else                                // We found the insertion point.
                 found = true;
@@ -324,24 +324,24 @@ contract IICO {
      *  This function is O(n), where n is the amount of bids. This could exceed the gas limit, therefore this function should only be used for interface display and not by other contracts.
      *  @return The current valuation and cut off bid's details.
      */
-    function valuationAndCutOff() public view returns (uint valuation, uint virtualValuation, uint currentCutOffBidID, uint currentCutOffBidMaxVal, uint currentCutOffBidContrib) {
+    function valuationAndCutOff() public view returns (uint valuation, uint virtualValuation, uint currentCutOffBidID, uint currentCutOffBidmaxValuation, uint currentCutOffBidContrib) {
         currentCutOffBidID = bids[TAIL].prev;
 
         // Loop over all bids or until cut off bid is found
         while (currentCutOffBidID != HEAD) {
             Bid storage bid = bids[currentCutOffBidID];
-            if (bid.contrib + valuation < bid.maxVal) { // We haven't found the cut-off yet.
+            if (bid.contrib + valuation < bid.maxValuation) { // We haven't found the cut-off yet.
                 valuation += bid.contrib;
                 virtualValuation += bid.contrib + (bid.contrib * bid.bonus) / BONUS_DIVISOR;
                 currentCutOffBidID = bid.prev; // Go to the previous bid.
             } else { // We found the cut-off bid. This bid will be taken partially.
-                currentCutOffBidContrib = bid.maxVal >= valuation ? bid.maxVal - valuation : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxVal.
+                currentCutOffBidContrib = bid.maxValuation >= valuation ? bid.maxValuation - valuation : 0; // The amount of the contribution of the cut-off bid that can stay in the sale without spilling over the maxValuation.
                 valuation += currentCutOffBidContrib;
                 virtualValuation += currentCutOffBidContrib + (currentCutOffBidContrib * bid.bonus) / BONUS_DIVISOR;
                 break;
             }
         }
 
-        currentCutOffBidMaxVal = bids[currentCutOffBidID].maxVal;
+        currentCutOffBidmaxValuation = bids[currentCutOffBidID].maxValuation;
     }
 }
