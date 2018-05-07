@@ -3,7 +3,7 @@ const { expectThrow, increaseTime } = require('kleros-interaction/helpers/utils'
 const MintableToken = artifacts.require('zeppelin-solidity/MintableToken.sol')
 const LWIICO = artifacts.require('LevelWhitelistedIICO.sol')
 
-contract('IICO', function (accounts) {
+contract('Level Whitelisted IICO', function (accounts) {
   let owner = accounts[0]
   let beneficiary = accounts[1]
   let buyerA = accounts[2]
