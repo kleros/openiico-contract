@@ -30,7 +30,7 @@ contract LevelWhitelistedIICO is IICO {
      *  @param _maximumBaseContribution The maximum contribution for buyers on the base list.
      */
     function LevelWhitelistedIICO(uint _startTime, uint _fullBonusLength, uint _partialWithdrawalLength, uint _withdrawalLockUpLength, uint _maxBonus, address _beneficiary, uint _maximumBaseContribution) IICO(_startTime,_fullBonusLength,_partialWithdrawalLength,_withdrawalLockUpLength,_maxBonus,_beneficiary) public {
-        maximumBaseContribution=maximumBaseContribution;
+        maximumBaseContribution=_maximumBaseContribution;
     }
     
     /** @dev Submit a bid. The caller must give the exact position the bid must be inserted into in the list.
