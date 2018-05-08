@@ -23,12 +23,143 @@ The griefing factor is small as the attacker needs to pay gas for storage write 
 - Parties calling the contract first need to call `search` to give the starting value of the search. Again, an attacker could make a lot of bids at high gas price in order in order to make a TX fail (due to the search taking more time than the max gas because the insertion point would have been changed by the new bids). But again this is a O(1) griefing factor with a really low griefing factor.
 
 
-## Running tests
+# Running tests
 
 1. `git clone https://github.com/kleros/openiico-contract`
 
 2. `cd openiico-contract`
 
-3. `truffle test ./test/IICO.js`
+3. `truffle test`
 
 [Truffle](http://truffleframework.com/) should be installed: `npm install -g truffle`
+
+
+
+# Setting up your own contract
+
+This readme assumes that you have some experience with Ethereum, Solidity, Metamask, etc...
+
+In order to test the https://github.com/kleros/openiico Dapp it might be helpful to deploy your own `iico` contract. 
+
+`git clone https://github.com/kleros/openiico-contract`
+
+We are using Kovan, for me the easier way to get some test Kovan Ether is the faucet: https://gitter.im/kovan-testnet/faucet
+
+You paste your ETH address and a bot sends 5 test ETH shortly after.
+
+We will use Metamask and Remix IDE to deploy the contract.
+
+To get all the files in a single run, we will use a [truffle-flattener](https://www.npmjs.com/package/truffle-flattener)
+
+`npm install truffle-flattener -g`
+
+`truffle-flattener contracts/LevelWhitelistedIICO.sol > output.sol`
+
+Now get the contents of `output.sol` and go to https://remix.ethereum.org/
+
+Constructor parameters:
+
+```
+uint256 _startTime, 
+uint256 _fullBonusLength, 
+uint256 _partialWithdrawalLength, 
+uint256 _withdrawalLockUpLength, 
+uint256 _maxBonus, 
+address _beneficiary, 
+uint256 _maximumBaseContribution
+```
+
+
+JavaScript hack to get current timestamp: `((+ new Date()) + "").slice(0, -3)`
+Converting date to number, then converting number to string, then removing 3 last digits to have Unix epoch time (as opposed to JavaScript milliseconds)
+
+In my instance I will pass the following parameters:
+
+`1525792200, 86400, 86400, 86400, 2E8, "0x85A363699C6864248a6FfCA66e4a1A5cCf9f5567", "5000000000000000000"`
+
+Note that your initial timestamp and duration of particular phases will differ. Also the beneficiary address is most likely to be different :)
+
+Note that `_maxBonus` is expressed in relation to `uint constant BONUS_DIVISOR = 1E9;`
+
+Note that JavaScript handles large numbers different than Solidity and sometimes you need to apply double quotes.
+
+You can see the deployed contract here: https://kovan.etherscan.io/address/0x3311fff00a0b7553f127b5b25397e12cb268f919#code
+
+
+## Token creation
+
+We have IICO deployed but we don't have the token! We need to create token now...
+
+
+```
+    function setToken(ERC20 _token) public onlyOwner {
+        require(address(token) == address(0)); // Make sure the token is not already set.
+
+        token = _token;
+        tokensForSale = token.balanceOf(this);
+    }
+```
+
+
+We will create `MintableToken` so that we can mint tokens to the crowdsale address - as you can see in the code above, the amount of tokens for sale is equal to the balance.
+
+Let's do this:
+
+```
+pragma solidity ^0.4.19;
+
+import 'zeppelin-solidity/contracts/token/ERC20/MintableToken.sol';
+
+contract KlerosCoin is MintableToken {
+    string public name = "KLEROS COIN";
+    string public symbol = "KLE";
+    uint8 public decimals = 18;
+}
+```
+
+Save this code in `contracts/KlerosCoin.sol` and then `truffle-flattener contracts/KlerosCoin.sol  > output-coin.sol`
+
+Back to Remix to deploy it.
+
+Here it is deployed `KlerosCoin` contract: https://kovan.etherscan.io/address/0xbddc43642eb2b9307e92d7b7e32c31958081ffb8#code
+
+
+## Setting the token, setting the whitelister
+
+There are many ways how you can interact with smart contracts. Because we were using Remix IDE we should have easy access to the functions.
+
+First, we will start with mint, the beneficiary is the address of the crowdsale
+
+> Total token supply: 1,000,000,000 PNK
+> 16% First Round of Token Sale
+
+Source: https://kleros.io/token-sale
+
+The way how decimals, floating point numbers, and everything works this should be the correct number:
+`"160000000000000000000000000"`
+
+*(easy to make a mistake, I'm sorry)*
+
+And the beneficiary: `0x3311fff00a0b7553f127b5b25397e12cb268f919` which is the `iico` address
+
+
+Run the transaction.
+
+
+Verify on Etherscan minting has succeeded.
+
+
+
+Now set the token to the `iico`. Again will use Remix IDE.
+
+Now set the whitelister - for simplicity the whitelister will be the same account as owner.
+
+Now add to whitelist. Note that the function expects an array.
+
+## Verify on the web
+
+Go to: https://openiico.io/
+
+Put the crowdsales address: `0x3311ffF00A0b7553f127b5B25397E12CB268F919` *(while still being logged in to Kovan in Metamask)*
+
+If you spot any issues go to https://github.com/kleros/openiico and help us [buidl](https://twitter.com/vitalikbuterin/status/971417459872882690) decentralized future together.
