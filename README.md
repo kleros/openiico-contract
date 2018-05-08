@@ -142,19 +142,21 @@ The way how decimals, floating point numbers, and everything works this should b
 
 And the beneficiary: `0x3311fff00a0b7553f127b5b25397e12cb268f919` which is the `iico` address
 
+![image](https://github.com/stefek99/openiico-contract/blob/run-your-own/docs/interacting-with-contracts.png?raw=true)
 
 Run the transaction.
 
-
 Verify on Etherscan minting has succeeded.
 
-
+![image](https://github.com/stefek99/openiico-contract/blob/run-your-own/docs/reading-contract.png?raw=true)
 
 Now set the token to the `iico`. Again will use Remix IDE.
 
+![image](https://github.com/stefek99/openiico-contract/blob/run-your-own/docs/set-token.png?raw=true)
+
 Now set the whitelister - for simplicity the whitelister will be the same account as owner.
 
-Now add to whitelist. Note that the function expects an array.
+Now add to whitelist. Note that the function expects an array, so even if you add a single guy or lady - use square brackets.
 
 ## Verify on the web
 
@@ -162,4 +164,8 @@ Go to: https://openiico.io/
 
 Put the crowdsales address: `0x3311ffF00A0b7553f127b5B25397E12CB268F919` *(while still being logged in to Kovan in Metamask)*
 
-If you spot any issues go to https://github.com/kleros/openiico and help us [buidl](https://twitter.com/vitalikbuterin/status/971417459872882690) decentralized future together.
+After getting yourself with the tutorial, you can place a first bid. If you are the only bidder, the `0.1 ETH` will give you all the tokens!
+
+![](https://github.com/stefek99/openiico-contract/blob/run-your-own/docs/single-bid-all-the-tokens.png?raw=true)
+
+If you spot any issues go to https://github.com/kleros/openiico report an issue and help us [buidl](https://twitter.com/vitalikbuterin/status/971417459872882690) decentralized future together.
