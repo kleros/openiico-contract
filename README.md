@@ -22,6 +22,8 @@ Security notes:
 The griefing factor is small as the attacker needs to pay gas for storage write operations while the defender only needs to pay for storage read operations (plus a constant amount of storage write operations per `finalize` call).
 - Parties calling the contract first need to call `search` to give the starting value of the search. Again, an attacker could make a lot of bids at high gas price in order in order to make a TX fail (due to the search taking more time than the max gas because the insertion point would have been changed by the new bids). But again this is a O(1) griefing factor with a really low griefing factor.
 
+The LevelWhitelistedIICO contract inherits from the IICO contract. It implements a basic KYC where users individual contributions are capped and a reinforced KYC where contributions are not limited.
+
 
 # Running tests
 
@@ -31,11 +33,15 @@ The griefing factor is small as the attacker needs to pay gas for storage write 
 
 3. `truffle test`
 
-[Truffle](http://truffleframework.com/) should be installed: `npm install -g truffle`
+
+# Setting up your own contract (high level)
+1. Deploy a token and IICO contract. Note that you can use the same token contract with multiple IICO contracts.
+2. Use `Token.mint(IICOContractAddress)` to mint tokens for the IICO contract on the token contract.
+3. Use `IICO.setToken(tokenContractAddress)` to set the token on the IICO contract.
+4. If you are using the IICO contract with whitelist functionality, you'll also need to call `IICO.setWhitelister(whitelisterAddress)` so the whitelister can add addresses to the whitelist.
 
 
-
-# Setting up your own contract
+# Setting up your own contract (step by step)
 
 This readme assumes that you have some experience with Ethereum, Solidity, Metamask, etc...
 
