@@ -22,6 +22,8 @@ Security notes:
 The griefing factor is small as the attacker needs to pay gas for storage write operations while the defender only needs to pay for storage read operations (plus a constant amount of storage write operations per `finalize` call).
 - Parties calling the contract first need to call `search` to give the starting value of the search. Again, an attacker could make a lot of bids at high gas price in order in order to make a TX fail (due to the search taking more time than the max gas because the insertion point would have been changed by the new bids). But again this is a O(1) griefing factor with a really low griefing factor.
 
+The LevelWhitelistedIICO contract inherits from the IICO contract. It implements a basic KYC where users individual contributions are capped and a reinforced KYC where contributions are not limited.
+
 
 ## Running tests
 
