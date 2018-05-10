@@ -896,7 +896,7 @@ contract('IICO', function (accounts) {
     await expectThrow(iico.withdraw(3,{from: buyerC, gasPrice: gasPrice})) // cannot withdraw more than once
     let txFee = tx.receipt.gasUsed * gasPrice
     let CarlBalanceAfterReimbursment = web3.eth.getBalance(buyerC)
-    assert.closeTo(CarlBalanceBeforeReimbursment.plus(1E18).minus(txFee).toNumber(), CarlBalanceAfterReimbursment.toNumber(), 0.005*1E18, 'Reimbursement amount not correct');
+    assert.closeTo(CarlBalanceBeforeReimbursment.plus(1E18).minus(txFee).toNumber(), CarlBalanceAfterReimbursment.toNumber(), 0.01*1E18, 'Reimbursement amount not correct');
 
     var CarlsBidAfter = await iico.bids.call(3);
     var CarlsBidAfterBonus = CarlsBidAfter[4].toNumber();
