@@ -34,12 +34,47 @@ The LevelWhitelistedIICO contract inherits from the IICO contract. It implements
 3. `truffle test`
 
 
-# Setting up your own contract (high level)
+## Vulnerability bounties (up to 50 ETH)
+
+The bounty program includes contracts develloped by the Kleros team and the third-party ones we will rely upon:
+- [IICO.sol](https://github.com/kleros/openiico-contract/blob/master/contracts/IICO.sol)
+- [LevelWhitelistedIICO.sol](https://github.com/kleros/openiico-contract/blob/master/contracts/LevelWhitelistedIICO.sol)
+- The `token` will be a MiniMeToken (with a slight modification of the approve function to follow ERC20 recommendations) as deployed [here](https://etherscan.io/address/0x93ED3FBe21207Ec2E8f2d3c3de6e058Cb73Bc04d#code).
+- The `beneficiary` will be a Gnosis MultiSigWallet that you can find [here](https://github.com/gnosis/MultiSigWallet/blob/master/contracts/MultiSigWallet.sol) at commit e1b25e8.
+
+This contract has up to 50 ETH of bug and vulnerabilities bounties attached.
+Only vulnerabilities which can lead to real issues are covered by the bug bounty program. As an example, finding an addition which can overflow leading to someone else loosing money is a vulnerability, but simply stating "Not using SafeMath is bad" isn't (in our case, we chose not to use SafeMath, as blocking the finalization would be a more critical failure mode than an overflow).
+
+The vulnerability payout ranges from 1 ETH (display issue which is unlikely to lead to any significant loss of funds) to 50 ETH (vulnerabilities which would make someone likely to steal ETH from the bidders or the beneficiary).
+
+The OWASP matrix is used to determine payouts:
+![OWASP](https://raw.githubusercontent.com/kleros/openiico-contract/master/owasp.png "OWASP")
+
+**Critical**: Up to 50 ETH.
+
+**High**: Up to 30 ETH.
+
+**Medium**: Up to 20 ETH.
+
+**Low**: Up to 4 ETH.
+
+**Note**: Up to 1 ETH.
+
+The final vulnerability classification belongs to the Kleros team, but we are obviously committed to ensure a fair remuneration for bounty hunters in order to improve the security of the Ethereum ecosystem.
+
+Vulnerabilities should be disclosed to contact@kleros.io, please includes [BUG BOUNTY] in the subject. Note that only the first party to report a vulnerabilty is eligible to bounties. The last submissions are due for May 14 in order for us not to start the sale would a vulnerability be discovered. Later submission would still be eligible but at a reduce payout.
+Please refrain of any action damaging property that you don't own.
+
+
+# Setting up your own contract (automated)
+
+See the [deployment script](https://github.com/kleros/openiico/blob/develop/src/scripts/set-up-sale.js) in the repository with [openiico dapp](https://github.com/kleros/openiico)
+
+# Setting up your own contract (high level overview)
 1. Deploy a token and IICO contract. Note that you can use the same token contract with multiple IICO contracts.
 2. Use `Token.mint(IICOContractAddress)` to mint tokens for the IICO contract on the token contract.
 3. Use `IICO.setToken(tokenContractAddress)` to set the token on the IICO contract.
 4. If you are using the IICO contract with whitelist functionality, you'll also need to call `IICO.setWhitelister(whitelisterAddress)` so the whitelister can add addresses to the whitelist.
-
 
 # Setting up your own contract (step by step)
 
@@ -175,3 +210,4 @@ After getting yourself with the tutorial, you can place a first bid. If you are 
 ![](https://github.com/stefek99/openiico-contract/blob/run-your-own/docs/single-bid-all-the-tokens.png?raw=true)
 
 If you spot any issues go to https://github.com/kleros/openiico report an issue and help us [buidl](https://twitter.com/vitalikbuterin/status/971417459872882690) decentralized future together.
+
