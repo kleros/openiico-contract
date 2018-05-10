@@ -25,13 +25,13 @@ The griefing factor is small as the attacker needs to pay gas for storage write 
 The LevelWhitelistedIICO contract inherits from the IICO contract. It implements a basic KYC where users individual contributions are capped and a reinforced KYC where contributions are not limited.
 
 
-## Running tests
+# Running tests
 
 1. `git clone https://github.com/kleros/openiico-contract`
 
 2. `cd openiico-contract`
 
-3. `truffle test ./test/IICO.js`
+3. `truffle test`
 
 [Truffle](http://truffleframework.com/) should be installed: `npm install -g truffle`
 
@@ -67,8 +67,13 @@ Vulnerabilities should be disclosed to contact@kleros.io, please includes [BUG B
 Please refrain of any action damaging property that you don't own.
 
 
+# Deployment
 
+1. Deploy a token and IICO contract. Note that you can use the same token contract with multiple IICO contracts.
+2. Use `Token.mint(IICOContractAddress)` to mint tokens for the IICO contract on the token contract.
+3. Use `IICO.setToken(tokenContractAddress)` to set the token on the IICO contract.
+4. If you are using the IICO contract with whitelist functionality, you'll also need to call `IICO.setWhitelister(whitelisterAddress)` so the whitelister can add addresses to the whitelist.
 
+You can also run the [deployment script](https://github.com/kleros/openiico/blob/develop/src/scripts/set-up-sale.js) in the repository with [openiico dapp](https://github.com/kleros/openiico)
 
-
-
+[Step-by-step tutorial](https://steemit.com/kleros/@genesisre/kleros-interactive-ico-iico-deploy-your-version-and-try-it-out) also available.
