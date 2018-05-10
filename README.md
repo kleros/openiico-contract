@@ -33,6 +33,7 @@ The LevelWhitelistedIICO contract inherits from the IICO contract. It implements
 
 3. `truffle test`
 
+[Truffle](http://truffleframework.com/) should be installed: `npm install -g truffle`
 
 ## Vulnerability bounties (up to 50 ETH)
 
