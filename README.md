@@ -66,7 +66,7 @@ The final vulnerability classification belongs to the Kleros team, but we are ob
 Vulnerabilities should be disclosed to contact@kleros.io, please includes [BUG BOUNTY] in the subject. Note that only the first party to report a vulnerabilty is eligible to bounties. The last submissions are due for May 14 in order for us not to start the sale would a vulnerability be discovered. Later submission would still be eligible but at a reduce payout.
 Please refrain of any action damaging property that you don't own.
 
-Note that this program is not the only security measure which have been put in place (there was a previous bug bounty program with a lower payout, there is audits and reviews by team members and partners).
+Note that this program is not the only security measure which have been put in place (there was a previous bug bounty program with a lower payout, there are exernal audits and reviews by team members and partners).
 
 # Deployment
 
