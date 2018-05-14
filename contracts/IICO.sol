@@ -161,7 +161,7 @@ contract IICO {
 
     /** @dev Search for the correct insertion spot and submit a bid.
      *  This function is O(n), where n is the amount of bids between the initial search position and the insertion position.
-     *  The UI must first call search to find the best point to start the search so it consumes the least amount of gas possible.
+     *  The UI must first call search to find the best point to start the search such that it consumes the least amount of gas possible.
      *  Using this function instead of calling submitBid directly prevents it from failing in the case where new bids are added before the transaction is executed.
      *  @param _maxValuation The maximum valuation given by the contributor. If the amount raised is higher, the bid is cancelled and the contributor refunded because it prefers a refund instead of this level of dilution. To buy no matter what, use INFINITY.
      *  @param _next The bidID of the next bid in the list.
@@ -171,7 +171,7 @@ contract IICO {
     }
 
     /** @dev Withdraw a bid. Can only be called before the end of the withdrawal lock period.
-     *  Withdrawing a bid divides its bonus by 3.
+     *  Withdrawing a bid reduces its bonus by 1/3.
      *  For retrieving ETH after an automatic withdrawal, use the redeem function.
      *  @param _bidID The ID of the bid to withdraw.
      */
