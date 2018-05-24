@@ -15,10 +15,10 @@ Implementation details and modifications compared to the paper:
 - Calling the fallback function while sending ETH places a bid with an infinite maximum valuation. This allows buyers who want to buy no matter the price not need to use a specific interface and just send ETH. Without ETH, a call to the fallback function redeems the bids of the caller.
 
 Security notes:
-- If the fallback function of the cutoff bid reverts on send. The cutoff bid contributor will not receive its ETH back. It's the responsability of contributors using smart contracts to ensure their fallback functions accept transfers.
+- If the fallback function of the cutoff bid reverts on send. The cutoff bid contributor will not receive its ETH back. It's the responsibility of contributors using smart contracts to ensure their fallback functions accept transfers.
 - The contract assumes that the owner set appropriate parameters.
 - The contract assumes that just after creation, tokens are transfered to the IICO contract and that the owner calls `setToken`.
-- The general philosophy is that users are responsible for their actions, interfaces must help them not to make mistakes but it is not the responsability of the contract to do so.
+- The general philosophy is that users are responsible for their actions, interfaces must help them not to make mistakes but it is not the responsibility of the contract to do so.
 - There is a O(1) griefing factor attack to this contract. However, the griefing factor is small. A user could make a lot of useless bids to make the `finalize` function cost more gas to finish or require calling it multiple times due to gas limit.
 The griefing factor is small as the attacker needs to pay gas for storage write operations while the defender only needs to pay for storage read operations (plus a constant amount of storage write operations per `finalize` call).
 - Parties calling the contract first need to call `search` to give the starting value of the search. Again, an attacker could make a lot of bids at high gas price in order in order to make a TX fail (due to the search taking more time than the max gas because the insertion point would have been changed by the new bids). But again this is a O(1) griefing factor with a really low griefing factor.
