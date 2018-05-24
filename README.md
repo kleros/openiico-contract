@@ -16,7 +16,7 @@ Implementation details and modifications compared to the paper:
 
 Security notes:
 - If the fallback function of the cutoff bid reverts on send. The cutoff bid contributor will not receive its ETH back. It's the responsibility of contributors using smart contracts to ensure their fallback functions accept transfers.
-- The contract assumes that the owner set appropriate parameters.
+- The contract assumes that the owner sets appropriate parameters.
 - The contract assumes that just after creation, tokens are transfered to the IICO contract and that the owner calls `setToken`.
 - The general philosophy is that users are responsible for their actions, interfaces must help them not to make mistakes but it is not the responsibility of the contract to do so.
 - There is a O(1) griefing factor attack to this contract. However, the griefing factor is small. A user could make a lot of useless bids to make the `finalize` function cost more gas to finish or require calling it multiple times due to gas limit.
