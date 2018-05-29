@@ -946,11 +946,6 @@ contract('IICO', function (accounts) {
     // David: 4 ETH 8%  bonus = 4.32
     var totalContributed = 7.2 + 7.08 + 4.48 + 4.32; // 23.08
 
-    var a = (await token.balanceOf(buyerA)).toNumber()
-    var b = (await token.balanceOf(buyerB)).toNumber()
-    var c = (await token.balanceOf(buyerC)).toNumber()
-    var d = (await token.balanceOf(buyerD)).toNumber()
-
     // Verify that the tokens are correctly distributed.
     assert.closeTo( (await token.balanceOf(buyerA)).toNumber() / 1E18, 7.20 / totalContributed * 100, 0.2, 'The buyer A has not been given the right amount of tokens')
     assert.closeTo( (await token.balanceOf(buyerB)).toNumber() / 1E18, 7.08 / totalContributed * 100, 0.2, 'The buyer B has not been given the right amount of tokens')
