@@ -28,13 +28,14 @@ The LevelWhitelistedIICO contract inherits from the IICO contract. It implements
 
 # Running tests
 
-1. `git clone https://github.com/kleros/openiico-contract`
-
-2. `cd openiico-contract`
-
-3. `truffle test`
+`truffle test`
 
 [Truffle](http://truffleframework.com/) should be installed: `npm install -g truffle`
+
+There is also a stress test that handles 5000 bid and takes 20-30 minutes to run and has intermittent failures for no obvious reasons. See [this issue](https://github.com/kleros/openiico-contract/pull/30). In order to run it:
+
+`test test-finalize/StressFinalize.js`
+
 
 ## Vulnerability bounties (up to 50 ETH)
 
