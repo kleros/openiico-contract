@@ -1,5 +1,6 @@
 /** @title Interactive Coin Offering
  *  @author Clément Lesaege - <clement@lesaege.com>
+ *  This smart contract has undertaken two audits and two bounty programs. However, keep in mind that smart contracts still rely on experimental technology.
  */
 
 pragma solidity ^0.4.23;
